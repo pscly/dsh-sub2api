@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.2
+
+- Quote quota in yuan, which is what the site actually sells. The panel labelled
+  it 美元额度 and rendered every amount with `$`, but Sub2API prices one quota
+  unit as one yuan ("1 额度 = 1 元") and the recharge page grants 2 元 of quota
+  per 元 paid.
+- The ratio is read from configuration (`rechargeMultiplier`, default 2) instead
+  of being hardcoded in the card, and `/status` plus the order response carry it
+  so the estimate and the host agree.
+
 ## 0.2.1
 
 - Declare reasoning efforts so the picker actually offers a thinking control.

@@ -285,6 +285,19 @@ try {
   fail("思考等级", error);
 }
 
+console.log("\n[7.8] 额度单位与倍率");
+try {
+  const state = await json(harness.base, "/api/sub2api/status");
+  assert.equal(state.rechargeMultiplier, 2, `倍率 ${state.rechargeMultiplier}`);
+  assert.equal(state.currency, "CNY", "额度以人民币计价");
+
+  const order = await json(harness.base, "/api/sub2api/recharge", { amountYuan: 10 });
+  assert.equal(order.multiplier, 2, "下单响应也带倍率");
+  pass("额度按人民币计价，倍率来自配置");
+} catch (error) {
+  fail("额度单位", error);
+}
+
 console.log("\n[8] 充值");
 try {
   const order = await json(harness.base, "/api/sub2api/recharge", { amountYuan: 20 });

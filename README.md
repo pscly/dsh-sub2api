@@ -83,7 +83,7 @@ dsh plugin add dsh-sub2api
 
 ### 余额与充值
 
-金额预设 + 自定义，按 `1 元 = 2 美元额度` 实时显示预计到账。点「去支付」在新标签页打开支付页，付款后自动轮询状态并刷新余额。下方是兑换码入口。
+金额预设 + 自定义，按 `1 元 = 2 元额度` 实时显示预计到账（倍率来自配置，不是写死的）。点「去支付」在新标签页打开支付页，付款后自动轮询状态并刷新余额。下方是兑换码入口。
 
 ### 模型
 
@@ -155,6 +155,7 @@ Agent 工具（只读）：`sub2api_status`、`sub2api_models`。模型可以回
 | `visibleModels` | 全部 | 运营方统一指定可见模型（优先于面板选择） |
 | `contextWindow` | 逐模型解析 | 强制覆盖**所有**模型的上下文窗口 |
 | `defaultContextWindow` | 128000 | 上游未声明时的兜底值 |
+| `rechargeMultiplier` | 2 | 每 1 元到账多少额度，仅用于面板预估；实际到账由支付站决定 |
 | `showSidebarQuota` | false | 侧边栏余额卡片 |
 | `autoProvision` | true | 登录后自动建 Key |
 | `announceToAgent` | true | 向 agent 注入插件说明 |

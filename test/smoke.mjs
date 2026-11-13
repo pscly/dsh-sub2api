@@ -41,7 +41,8 @@ async function json(base, path, body) {
   return payload.data;
 }
 
-const sub2api = startFakeSub2Api();
+let lastChatBody;
+const sub2api = startFakeSub2Api({ onChatBody: (body) => { lastChatBody = body; } });
 const sub2apiBase = await sub2api.listen();
 const payCenter = startFakePayCenter({ sub2apiBase });
 const payBase = await payCenter.listen();
@@ -255,6 +256,33 @@ try {
   pass("流式对话通过", `${chunks.length} 个分片`);
 } catch (error) {
   fail("适配器", error);
+}
+
+console.log("\n[7.5] 思考等级");
+try {
+  const { adapter } = host.registered.adapters[0];
+
+  // The picker only offers a thinking control when the adapter declares levels.
+  const flash = await adapter.resolveModel("sub2api", "gpt-5.6-vision");
+  assert.ok(flash.reasoning, "gpt-5 家族应当声明思考等级");
+  assert.deepEqual(flash.reasoning.efforts.map((e) => e.id), ["minimal", "low", "medium", "high"]);
+
+  const plain = await adapter.resolveModel("sub2api", "kimi-k3");
+  assert.equal(plain.reasoning, undefined, "未声明的模型不给档位");
+
+  lastChatBody = undefined;
+  for await (const _chunk of adapter.stream({
+    provider: "sub2api",
+    model: "gpt-5.6-vision",
+    reasoningEffort: "high",
+    messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+  })) {
+    // drain
+  }
+  assert.equal(lastChatBody?.reasoning_effort, "high", `请求体：${JSON.stringify(lastChatBody)}`);
+  pass("档位声明 + 请求体映射", "reasoning_effort=high");
+} catch (error) {
+  fail("思考等级", error);
 }
 
 console.log("\n[8] 充值");

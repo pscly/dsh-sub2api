@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.1
+
+- Declare reasoning efforts so the picker actually offers a thinking control.
+  The host only accepts an effort a model has declared, and the adapter declared
+  none, so the selector was empty. Known families (deepseek-v4/flash/reasoner,
+  gpt-5, o3/o4) now expose minimal/low/medium/high, the chosen level is merged
+  into the request body as `reasoning_effort`, and `reasoningModels` opts other
+  ids in without guessing at upstreams that would reject the field.
+
 ## 0.2.0 — feature complete
 
 - **每模型上下文修正**：面板里点容量数字即可手填，存在面板状态文件里，优先于上游声明。

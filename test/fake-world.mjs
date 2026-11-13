@@ -190,6 +190,7 @@ export function startFakeSub2Api(hooks = {}) {
     if (path === "/v1/chat/completions" && req.method === "POST") {
       const key = keys.find((entry) => entry.key === token);
       if (!key) return sendJson(res, 401, { error: { message: "API_KEY_REQUIRED" } });
+      hooks.onChatBody?.(body);
       res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" });
       const chunk = (payload) => res.write(`data: ${JSON.stringify(payload)}\n\n`);
       chunk({ id: "c1", object: "chat.completion.chunk", choices: [{ index: 0, delta: { content: "你好" }, finish_reason: null }] });

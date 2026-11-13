@@ -98,6 +98,22 @@ dsh plugin add dsh-sub2api
 
 ---
 
+## 思考等级
+
+模型的思考档位由适配器**声明**，宿主只认声明过的 id——没声明就完全没有这个控件。插件对下列家族声明四档 `reasoning_effort`（极低 / 低 / 中 / 高）：
+
+`deepseek-v4*`、`deepseek-flash`、`deepseek-reasoner`、`deepseek-r1`、`gpt-5*`、`o3*`、`o4*`
+
+其它模型默认不给档位，因为无法确认上游认不认这个字段（认不出会忽略、也可能直接 400）。要让某个模型也出现档位，在配置里加：
+
+```yaml
+llm-sub2api:
+  reasoningModels: ["glm-5", "kimi-k3"]   # 按 id 片段匹配
+  defaultReasoningEffort: medium            # 可选，留空则用上游默认
+```
+
+选中的档位会以 `{"reasoning_effort": "<id>"}` 合并进请求体，和采样参数走同一条路径。面板的模型列表里，支持档位的模型会标注「思考 4 档」。
+
 ## 命令与工具
 
 ```

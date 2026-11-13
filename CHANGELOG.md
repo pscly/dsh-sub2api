@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.5
+
+- Published to npm as `dsh-sub2api`, which is what DSH Desktop's community
+  market requires for one-click install. README now leads with the npm command
+  and documents that the market entry is installable.
+
 ## 0.1.4
 
 - Never create an ungrouped key. With more than one group on offer and no

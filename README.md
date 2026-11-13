@@ -30,15 +30,23 @@
 
 ## 安装
 
-### 普通 DSH（命令行 / Web）
+### npm（推荐）
 
 ```sh
 dsh plugin --profile web add dsh-sub2api
 ```
 
+也可以在 **插件 → 添加插件** 里直接搜 `dsh-sub2api`。
+
 重启后打开 **设置 → Sub2API**。
 
 > 每个 profile 的插件列表独立：终端界面还需单独装一次。
+
+### 从 GitHub 装（不依赖 npm）
+
+```sh
+dsh plugin --profile web add github:pscly/dsh-sub2api#v0.1.4
+```
 
 ### DSH Desktop
 
@@ -68,7 +76,7 @@ dsh plugin --profile desktop add dsh-sub2api
 
 插件声明 `>=0.2.1-rc.2 <0.2.3`，并固定 `@dsh-ai-providers/openai-compatible@0.7.0`——这个版本同时接受 0.2.1 与 0.2.2 两个通道（0.7.3 只接受 0.2.2）。
 
-**从插件市场一键安装的前提**：Desktop 的市场只对满足四个条件的条目提供自动安装——单一 npm 包名、官方 registry 的 `latest` 返回同名稳定版本、包内声明 `dsh.bundle.patch`。本包满足后三项，**还差发布到 npm**。在发布之前，用上面的终端命令安装；GitHub 地址在市场里只会显示为「可浏览」，不会标成可自动安装。
+**从插件市场一键安装**：Desktop 的市场只对满足四个条件的条目提供自动安装——单一 npm 包名、官方 registry 的 `latest` 返回同名稳定版本、包内声明 `dsh.bundle.patch`。本包已全部满足（`dsh-sub2api@0.1.4` 起在 npm 上），所以在市场里能直接点安装。
 
 ## 配置
 

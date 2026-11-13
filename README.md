@@ -124,6 +124,25 @@ dsh plugin --profile desktop add dsh-sub2api
 - 日志与错误信息不包含 token、密钥或密码。
 - 支付链接里的 `token` 是 sub2api 的访问令牌，只在用户点「去支付」时生成，不写日志、不落盘。
 
+## 上下文窗口
+
+DSH 在切换模型前要算上下文容量，拿不到就直接拒绝：
+
+```
+Cannot switch to sub2api/...: no context capacity; configure contextWindow on that adapter model
+```
+
+`/v1/models` 透传的是上游响应，多数上游**不带 `context_length`**，所以插件自己补一个，回退链是：
+
+1. 配置里的 `contextWindow`（对所有模型生效）
+2. 上游声明的 `context_length` / `context_window`
+3. 实测表（目前只有 `deepseek-flash` / `deepseek-v4.1-flash` = 1,048,576，来自本站实测）
+4. `defaultContextWindow`，默认 **128000**
+
+面板的模型列表里会标出容量来源：`128k · 默认` 表示是兜底值，`1049k · 实测` 表示来自实测表，没有标记表示上游自己声明的。
+
+> 兜底值只是让对话能跑起来。如果某个模型实际容量更大，把它写进配置的 `contextWindow`，或者告诉我加进实测表——填大了上游会 400，填小了会提前压缩。
+
 ## 选择对话里显示哪些模型
 
 上游一个中转站往往有几十个模型，全部塞进选择器既难找也容易选错。面板的「模型 → 选择模型」里可以勾选要用的那几个：

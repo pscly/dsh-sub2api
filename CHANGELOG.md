@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.7
+
+- Always report a context window. The host refuses to switch to a model it
+  cannot size ("no context capacity for <route>; configure contextWindow on
+  that adapter model"), and `/v1/models` usually omits `context_length` because
+  it is the upstream's response passed through. The adapter now resolves one
+  through config → upstream → measured table → `defaultContextWindow` (128000),
+  and the panel labels where the figure came from.
+- `deepseek-flash` / `deepseek-v4.1-flash` are pinned to 1,048,576 from the
+  measurement on this gateway.
+
 ## 0.1.6
 
 - Make the chat model picker see a fresh catalog. It rebuilds itself from

@@ -212,6 +212,72 @@ try {
   fail("选组", error);
 }
 
+console.log("\n[J] 每个模型都必须有上下文窗口");
+try {
+  const { ModelCatalog, knownContext } = await import("../lib/sub2api/catalog.js");
+  const { DEFAULT_CONTEXT_WINDOW } = await import("../lib/constants.js");
+
+  // Measured on the gateway: 1,048,576 tokens.
+  assert.equal(knownContext("deepseek/deepseek-v4.1-flash"), 1048576);
+  assert.equal(knownContext("glm-5.2"), undefined);
+
+  const catalog = new ModelCatalog({
+    api: { gatewayModels: async () => ({ data: [] }) },
+    cachePath: () => "/tmp/ctx-check.json",
+    visibleModels: () => [],
+    selection: () => [],
+    contextWindow: () => undefined,
+    defaultContextWindow: () => undefined,
+    apiKey: async () => undefined,
+    logger: { info() {}, warn() {} },
+  });
+
+  // An upstream that discloses nothing, which is the case that broke switching.
+  catalog.models = [
+    { id: "deepseek/deepseek-v4.1-flash", name: "deepseek-v4.1-flash" },
+    { id: "mystery-model", name: "mystery-model" },
+    { id: "declared", name: "declared", contextWindow: 32000 },
+  ];
+
+  const visible = catalog.visible();
+  assert.ok(visible.every((m) => typeof m.contextWindow === "number" && m.contextWindow > 0), "每个模型都要有容量");
+  assert.deepEqual(visible.map((m) => m.contextSource), ["known", "default", "upstream"]);
+  assert.equal(visible[0].contextWindow, 1048576);
+  assert.equal(visible[1].contextWindow, DEFAULT_CONTEXT_WINDOW);
+  assert.equal(visible[2].contextWindow, 32000);
+
+  const llm = catalog.llmModels();
+  assert.ok(llm.every((m) => typeof m.contextWindow === "number"), "交给传输层的配置也要带容量");
+
+  // A forced global value replaces all three.
+  const forced = new ModelCatalog({
+    api: {}, cachePath: () => "/tmp/ctx-check.json", visibleModels: () => ["declared"],
+    selection: () => [], contextWindow: () => 64000, defaultContextWindow: () => undefined,
+    apiKey: async () => undefined, logger: {},
+  });
+  forced.models = [{ id: "declared", name: "declared", contextWindow: 32000 }];
+  assert.equal(forced.visible()[0].contextWindow, 64000);
+  assert.equal(forced.visible()[0].contextSource, "config");
+
+  // The host asks the adapter for these facts; an empty answer is what the
+  // compaction error complained about.
+  const { Sub2ApiAdapter } = await import("../lib/adapter.js");
+  const adapter = new Sub2ApiAdapter({
+    ctx: { get: () => undefined },
+    catalog,
+    apiBase: () => "http://127.0.0.1:1",
+    apiKeyEnv: () => "K",
+    timeoutMs: () => 1000,
+    idleTimeoutMs: () => 1000,
+  });
+  const resolved = await adapter.resolveModel("sub2api", "mystery-model");
+  assert.equal(resolved.context?.contextWindow, DEFAULT_CONTEXT_WINDOW, "resolveModel 必须给出容量");
+
+  pass("容量回退链 config → upstream → 实测 → 默认");
+} catch (error) {
+  fail("上下文窗口", error);
+}
+
 const failed = results.filter((entry) => !entry.ok);
 console.log(`\n${results.length - failed.length}/${results.length} 通过`);
 if (failed.length > 0) process.exitCode = 1;

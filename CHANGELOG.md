@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.5
+
+- 0.2.4's failure back-off also swallowed the retry a top-up was supposed to
+  trigger: the balance rejection recorded seconds earlier counted as "recently
+  failed", so the catalog stayed empty until the two minutes elapsed. The
+  back-off now excludes `INSUFFICIENT_BALANCE`, because that answer changes the
+  moment money lands.
+
 ## 0.2.4
 
 - Sync the catalog by itself once the account is funded. A top-up normally

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.4
+
+- Sync the catalog by itself once the account is funded. A top-up normally
+  happens on the payment site, so the balance is the only signal available:
+  `/status` now re-syncs when it sees a positive balance with an empty catalog,
+  or a stale snapshot, and announces the change to the picker. The panel polls
+  status every 45 seconds while visible, so models appear on their own.
+- Failures back off for two minutes, so a group that legitimately has no models
+  is not retried on every poll.
+
 ## 0.2.3
 
 - Show the running build's version in the panel's 诊断 card. A fix that shipped

@@ -157,10 +157,17 @@ try {
   assert.equal(before.error?.code, "INSUFFICIENT_BALANCE", `错误码：${JSON.stringify(before.error)}`);
 
   await json(harness.base, "/api/sub2api/redeem", { code: "GIFT" });
-  const after = await json(harness.base, "/api/sub2api/models/refresh", {});
-  assert.equal(after.error, null, "有余额后不应再报错");
-  assert.equal(after.count, 3, `同步数量 ${after.count}`);
-  pass("余额到账后模型自动解禁", `${after.count} 个`);
+
+  // No manual refresh: reading the status after the balance changed must be
+  // enough for the catalog to fill itself, because a top-up usually happens on
+  // the payment site and nothing else would tell the plugin about it.
+  const state = await json(harness.base, "/api/sub2api/status");
+  assert.equal(state.models.models.length, 3, `自动同步后 ${state.models.models.length} 个`);
+  assert.equal(state.models.needsRecharge, false, "不应再标记为待充值");
+
+  const after = await json(harness.base, "/api/sub2api/models");
+  assert.equal(after.models.length, 3, "目录已经填充");
+  pass("余额到账后自动同步，无需手动刷新", `${after.models.length} 个`);
 } catch (error) {
   fail("充值后模型解禁", error);
 }

@@ -290,6 +290,7 @@ try {
   const state = await json(harness.base, "/api/sub2api/status");
   assert.equal(state.rechargeMultiplier, 2, `倍率 ${state.rechargeMultiplier}`);
   assert.equal(state.currency, "CNY", "额度以人民币计价");
+  assert.match(String(state.version), /^\d+\.\d+\.\d+/, `版本号：${state.version}`);
 
   const order = await json(harness.base, "/api/sub2api/recharge", { amountYuan: 10 });
   assert.equal(order.multiplier, 2, "下单响应也带倍率");

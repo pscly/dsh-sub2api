@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.3
+
+- Show the running build's version in the panel's 诊断 card. A fix that shipped
+  minutes ago and an install that never updated look identical in a screenshot;
+  now the version says which one it is.
+- The 诊断 card and the diagnostic detail quote balances in ¥ like the rest of
+  the panel.
+
 ## 0.2.2
 
 - Quote quota in yuan, which is what the site actually sells. The panel labelled

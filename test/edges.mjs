@@ -278,6 +278,50 @@ try {
   fail("上下文窗口", error);
 }
 
+console.log("\n[K] /sub2api 命令");
+try {
+  const { commandDefinition } = await import("../lib/commands.js");
+  const { createFakeCredentials } = await import("./fake-world.mjs");
+  const { SessionStore } = await import("../lib/sub2api/session.js");
+  const { ModelCatalog } = await import("../lib/sub2api/catalog.js");
+
+  const credentials = createFakeCredentials();
+  const session = new SessionStore({
+    credentials: () => credentials,
+    api: { refresh: async () => ({ access_token: "t", expires_in: 3600 }) },
+    apiKeyEnv: () => "SUB2API_API_KEY",
+  });
+
+  const catalog = new ModelCatalog({
+    api: {}, cachePath: () => "/tmp/cmd-models.json", visibleModels: () => [],
+    selection: () => [], contextWindow: () => undefined, defaultContextWindow: () => undefined,
+    apiKey: async () => undefined, logger: {},
+  });
+  catalog.models = [{ id: "glm-5.2", name: "glm-5.2", contextWindow: 200000 }];
+
+  const definition = commandDefinition({
+    api: {}, session, catalog, cfg: () => ({ apiBase: "https://x", payBase: "https://y" }),
+  });
+  assert.equal(definition.name, "sub2api");
+
+  const notLogged = await definition.handler({ rawInput: "" });
+  assert.equal(notLogged.kind, "success");
+  assert.match(notLogged.text, /尚未登录/);
+
+  const help = await definition.handler({ rawInput: "help" });
+  assert.match(help.text, /用法/);
+
+  await credentials.set("SUB2API_API_KEY", "sk-abcdef1234567890");
+  await session.write({ accessToken: "t", expiresAt: Date.now() + 3600_000, user: { id: 1 }, email: "a@b.c" });
+
+  const models = await definition.handler({ rawInput: "models" });
+  assert.match(models.text, /glm-5.2/);
+  assert.match(models.text, /200k/);
+  pass("命令覆盖 未登录 / help / models");
+} catch (error) {
+  fail("命令", error);
+}
+
 const failed = results.filter((entry) => !entry.ok);
 console.log(`\n${results.length - failed.length}/${results.length} 通过`);
 if (failed.length > 0) process.exitCode = 1;

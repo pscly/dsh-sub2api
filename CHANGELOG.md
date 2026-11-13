@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.0 — feature complete
+
+- **每模型上下文修正**：面板里点容量数字即可手填，存在面板状态文件里，优先于上游声明。
+- **诊断面板**：一键检查登录、令牌、密钥、资料、余额、密钥分组、模型目录，失败项直接指出原因。
+- **用量与订阅**：账户卡显示今日/累计用量与请求数，订阅进度用日/周/月三条进度条。
+- **兑换码**：面板内直接兑换。
+- **公告**：有未读公告时在顶部提示。
+- **模型搜索**：模型超过 8 个时出现搜索框。
+- **`/sub2api` 命令**：status / models / balance / recharge / help。
+- **渲染边界**：面板内部错误不再拖垮整个设置页。
+- **面板状态迁移**：旧的 `sub2api-selection.json` 会自动并入 `sub2api-panel.json`。
+- **CI**：GitHub Actions 在 Node 22/24 上跑完整测试并校验打包内容；新增 `scripts/link-host.mjs` 统一宿主包链接方式，替代散落的符号链接。
+
 ## 0.1.7
 
 - Always report a context window. The host refuses to switch to a model it

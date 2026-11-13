@@ -20,7 +20,15 @@ function fail(label, error) {
 }
 
 /** The smallest React stand-in that satisfies module-scope destructuring. */
+class ComponentStub {
+  constructor(props) { this.props = props; }
+  setState(next) { this.state = { ...this.state, ...next }; }
+  render() { return null; }
+}
+ComponentStub.getDerivedStateFromError = () => ({ error: null });
+
 const reactStub = {
+  Component: ComponentStub,
   createElement: (...args) => ({ type: args[0], props: args[1] ?? {} }),
   useState: (initial) => [initial, () => {}],
   useEffect: () => {},

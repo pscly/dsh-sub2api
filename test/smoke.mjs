@@ -194,6 +194,43 @@ try {
   fail("模型可见性", error);
 }
 
+console.log("\n[6.7] 单模型上下文手动修正");
+try {
+  const before = (await json(harness.base, "/api/sub2api/models")).models.find((m) => m.id === "glm-5.2");
+  assert.equal(before.contextWindow, 200000, "上游声明的容量优先");
+
+  const after = await json(harness.base, "/api/sub2api/models/context", {
+    id: "glm-5.2",
+    contextWindow: 64000,
+  });
+  const entry = after.models.models.find((m) => m.id === "glm-5.2");
+  assert.equal(entry.contextWindow, 64000);
+  assert.equal(entry.contextSource, "panel");
+
+  const { adapter } = host.registered.adapters[0];
+  const resolved = await adapter.resolveModel("sub2api", "glm-5.2");
+  assert.equal(resolved.context.contextWindow, 64000, "resolveModel 使用手填值");
+
+  await json(harness.base, "/api/sub2api/models/context", { id: "glm-5.2", contextWindow: null });
+  const restored = (await json(harness.base, "/api/sub2api/models")).models.find((m) => m.id === "glm-5.2");
+  assert.equal(restored.contextWindow, 200000, "清除后回到上游值");
+  pass("手填容量可覆盖、可清除");
+} catch (error) {
+  fail("单模型上下文", error);
+}
+
+console.log("\n[6.8] 诊断");
+try {
+  const report = await json(harness.base, "/api/sub2api/diagnose");
+  assert.ok(Array.isArray(report.checks) && report.checks.length >= 5, "应当有多项检查");
+  assert.ok(report.checks.every((c) => typeof c.ok === "boolean" && c.label), "每项都要有结论");
+  assert.equal(report.ok, true, `诊断未通过：${JSON.stringify(report.checks.filter((c) => !c.ok))}`);
+  assert.ok(report.checks.some((c) => c.id === "catalog" && c.ok), "模型目录应当正常");
+  pass("诊断跑通", report.summary);
+} catch (error) {
+  fail("诊断", error);
+}
+
 console.log("\n[7] 适配器：模型列表与流式对话");
 try {
   const { adapter } = host.registered.adapters[0];

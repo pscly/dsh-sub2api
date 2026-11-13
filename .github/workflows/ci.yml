@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22.x', '24.x']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      # The plugin imports the host's LlmAdapter, tools and credential seam as
+      # peer dependencies so it shares one copy with the registry. npm refuses
+      # to install a package that is also a peer, so the harness is installed
+      # separately and linked, exactly as a developer would do locally.
+      - name: Install the DSH host
+        run: npm install -g --no-audit --no-fund @deepseek-ai/dsh@0.2.2-rc.1
+
+      - name: Install plugin dependencies
+        run: npm install --no-audit --no-fund --ignore-scripts --legacy-peer-deps
+
+      - name: Link host packages
+        run: node scripts/link-host.mjs
+
+      - name: Syntax check
+        run: |
+          set -e
+          for f in $(find lib test scripts -name '*.js' -o -name '*.mjs'); do
+            node --check "$f"
+          done
+
+      - name: Test
+        run: npm test
+
+      - name: Package contents
+        run: |
+          npm pack --dry-run --ignore-scripts | tee /tmp/pack.txt
+          grep -q 'cordis.patch.yml' /tmp/pack.txt
+          grep -q 'lib/index.js' /tmp/pack.txt

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.8
+
+- The panel no longer depends on the provider registration succeeding. A
+  rejected route (a second install, an older host) used to abort `apply`, so the
+  browser half rendered while every `/api/sub2api/*` route was missing — the
+  settings page showed only "HTTP 404：响应不是 JSON". Registration now runs in a
+  nested injection with its own try/catch, and `inject` is empty so the panel
+  mounts even when the LLM seam is absent.
+- Say what a 404 means: the panel now explains that the host half did not load,
+  lists the usual causes, and offers a retry.
+- Log what mounted: `[sub2api] 面板路由已注册：N 条（vX.Y.Z）`, or the reason it
+  did not (missing `webServer`, rejected provider).
+- Fall back to `ctx.get` when a host predates `ctx.inject`.
+
 ## 0.2.7
 
 - Retry 5xx and 429, not just dropped connections. The openresty in front of the

@@ -262,6 +262,21 @@ llm-sub2api:
 
 > 报错里的 URL 显示成 `/v1` 是传输层只上报 base 的结果；插件会把它改写成真正失败的那条路径 `/chat/completions`，并带上重试次数。
 
+### 设置页只有一行「HTTP 404：响应不是 JSON」
+
+这是**插件后端没有挂载**：浏览器那一半加载了（所以设置页能渲染），但 `/api/sub2api/*` 一条都不存在，DSH 的 Web 服务器对未知路径返回了 HTML。
+
+从 0.2.8 起，面板会直接说清楚，并给出排查步骤。根因通常是：
+
+| 原因 | 怎么确认 |
+|---|---|
+| 装上了但没重启 | 重启 DSH 后再打开 |
+| 插件被禁用 | 插件页确认已启用 |
+| 宿主那一半加载失败 | 看 `~/.dsh/logs/startup-*.log` 里 `sub2api` 的报错 |
+| 同一 profile 装了两份 | `dsh plugin list` 里出现两条 |
+
+从 0.2.8 起，宿主会在启动日志里写一行 `[sub2api] 面板路由已注册：N 条（vX.Y.Z）`——**有这行就说明后端活着**，没有就是没挂载，日志里会同时给出原因（缺 `webServer`、provider 注册被拒等）。
+
 ### `the endpoint answered 502 Bad Gateway: <html>...openresty</html>`
 
 这是**网关前面的 openresty 返回的**，不是模型的问题：sub2api 的 Go 后端当时不可用（重启中），或者上游账号被判定不可用正在切换。

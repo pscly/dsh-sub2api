@@ -384,7 +384,7 @@ export function createFakeCredentials() {
 /** A minimal host context: only the services this plugin touches. */
 export function createFakeHost() {
   const services = new Map();
-  const registered = { providers: [], adapters: [], routes: [], tools: [], sections: [], discoveries: [], replaced: [] };
+  const registered = { providers: [], adapters: [], routes: [], tools: [], sections: [], discoveries: [], replaced: [], pending: [] };
   const disposers = [];
 
   const ctx = {
@@ -402,12 +402,21 @@ export function createFakeHost() {
       if (typeof dispose === "function") disposers.push(dispose);
       return dispose;
     },
+    /** Nested injection: run the callback when every named service exists. */
+    inject(names, run) {
+      const ready = names.every((name) => services.has(name));
+      if (ready) run(ctx);
+      else registered.pending.push(names.join(","));
+      return () => {};
+    },
     llm: {
       registerConfigurableProviders(entries) {
+        if (this?.fail) throw new Error("DUPLICATE_PROVIDER: sub2api already registered");
         registered.providers.push(...entries);
         return () => {};
       },
       registerAdapter(providers, adapter) {
+        if (this?.fail) throw new Error("DUPLICATE_ADAPTER: sub2api already registered");
         // The real handle is callable and carries `replace`, whose only job is
         // to publish llm/adapters-updated so the picker refetches.
         registered.adapters.push({ providers, adapter });

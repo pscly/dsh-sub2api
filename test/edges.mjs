@@ -322,6 +322,26 @@ try {
   fail("命令", error);
 }
 
+console.log("\n[L] provider 注册失败时面板仍然挂载");
+try {
+  const host = createFakeHost();
+  host.services.set("credentials", createFakeCredentials());
+  // A second install, or a host that rejects the route, must not remove the
+  // panel: without it the user cannot even see what went wrong.
+  host.ctx.llm.fail = true;
+
+  apply(host.ctx, { apiBase: "http://127.0.0.1:1", payBase: "http://127.0.0.1:1" });
+  await new Promise((resolve) => setTimeout(resolve, 30));
+
+  assert.equal(host.registered.providers.length, 0, "注册确实失败了");
+  assert.ok(host.registered.routes.length > 0, "路由仍应注册");
+  const status = host.registered.routes.find((route) => route.path.endsWith("/status"));
+  assert.ok(status, "status 路由必须在");
+  pass("注册失败不拖垮面板", `${host.registered.routes.length} 条路由`);
+} catch (error) {
+  fail("provider 注册失败降级", error);
+}
+
 const failed = results.filter((entry) => !entry.ok);
 console.log(`\n${results.length - failed.length}/${results.length} 通过`);
 if (failed.length > 0) process.exitCode = 1;

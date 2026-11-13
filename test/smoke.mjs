@@ -1,0 +1,247 @@
+/**
+ * End-to-end smoke test against fake services.
+ *
+ * Deliberately runs the *real* plugin entry, the real routes and the real
+ * adapter; only the two remote services and the host seams are fake. That is
+ * the closest thing to "it works" without installing the plugin into a profile.
+ */
+
+import assert from "node:assert/strict";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { rm } from "node:fs/promises";
+import { apply } from "../lib/index.js";
+import {
+  createFakeCredentials,
+  createFakeHost,
+  startFakePayCenter,
+  startFakeSub2Api,
+  startRouteHarness,
+} from "./fake-world.mjs";
+
+const results = [];
+function pass(label, detail = "") {
+  results.push({ ok: true, label, detail });
+  console.log(`  ✓ ${label}${detail ? ` — ${detail}` : ""}`);
+}
+function fail(label, error) {
+  results.push({ ok: false, label, detail: String(error?.message ?? error) });
+  console.log(`  ✗ ${label} — ${String(error?.message ?? error)}`);
+}
+
+async function json(base, path, body) {
+  const init = { method: body === undefined ? "GET" : "POST", headers: {} };
+  if (body !== undefined) {
+    init.headers["Content-Type"] = "application/json";
+    init.body = JSON.stringify(body);
+  }
+  const response = await fetch(base + path, init);
+  const payload = await response.json();
+  if (payload.ok !== true) throw new Error(`${path}: ${payload.error ?? "failed"}`);
+  return payload.data;
+}
+
+const sub2api = startFakeSub2Api();
+const sub2apiBase = await sub2api.listen();
+const payCenter = startFakePayCenter({ sub2apiBase });
+const payBase = await payCenter.listen();
+
+const host = createFakeHost();
+const credentials = createFakeCredentials();
+host.services.set("credentials", credentials);
+
+// Keep every byte the plugin writes inside the temp dir: the smoke test must
+// not leave a catalog cache in the real $DSH_HOME.
+const cachePath = join(tmpdir(), `dsh-sub2api-smoke-${process.pid}.json`);
+apply(host.ctx, { apiBase: sub2apiBase, payBase, keyName: "dsh", modelsCachePath: cachePath });
+
+const harness = await startRouteHarness(host.registered.routes);
+
+console.log("\n[1] 注册表");
+try {
+  assert.equal(host.registered.providers.length, 1, "应当注册一个 provider 目录项");
+  assert.equal(host.registered.providers[0].provider, "sub2api");
+  assert.equal(host.registered.adapters.length, 1, "应当注册一个适配器");
+  assert.deepEqual(host.registered.adapters[0].providers, ["sub2api"]);
+  assert.ok(host.registered.routes.length >= 10, `路由数量 ${host.registered.routes.length}`);
+  pass("provider / adapter / routes 均已注册", `${host.registered.routes.length} 条路由`);
+} catch (error) {
+  fail("注册表", error);
+}
+
+console.log("\n[2] 未登录状态");
+try {
+  const state = await json(harness.base, "/api/sub2api/status");
+  assert.equal(state.loggedIn, false);
+  assert.equal(state.hasKey, false);
+  pass("status 返回未登录", `apiBase=${state.apiBase}`);
+} catch (error) {
+  fail("未登录状态", error);
+}
+
+console.log("\n[3] 注册 + 自动开通");
+let stateAfterAuth;
+try {
+  const data = await json(harness.base, "/api/sub2api/auth", {
+    email: "tester@example.com",
+    password: "secret-123",
+  });
+  assert.equal(data.mode, "register", "新邮箱应当走注册");
+  assert.equal(data.ready, true, `开通未完成：${JSON.stringify(data.steps)}`);
+
+  const keyStep = data.steps.find((step) => step.id === "key");
+  assert.ok(keyStep?.ok, "密钥步骤应当成功");
+  const credentialStep = data.steps.find((step) => step.id === "credential");
+  assert.ok(credentialStep?.ok, "凭据写入应当成功");
+  const catalogStep = data.steps.find((step) => step.id === "catalog");
+  assert.ok(catalogStep?.ok, "模型同步应当成功");
+
+  const createdKey = sub2api.keys[0];
+  assert.equal(createdKey.name, "dsh", "密钥名称必须是 dsh");
+  assert.ok(credentials._refs.get("SUB2API_API_KEY"), "凭据库应当存有密钥");
+  stateAfterAuth = data.state;
+  pass("注册后自动建 dsh 密钥并写入凭据", `${sub2api.keys.length} 个密钥`);
+  pass("上游模型已同步", `${stateAfterAuth.models.models.length} 个`);
+} catch (error) {
+  fail("注册 + 自动开通", error);
+}
+
+console.log("\n[4] 状态与余额");
+try {
+  const state = await json(harness.base, "/api/sub2api/status");
+  assert.equal(state.loggedIn, true);
+  assert.equal(state.hasKey, true);
+  assert.equal(state.email, "tester@example.com");
+  assert.ok(state.keyMasked.includes("…"), `掩码异常：${state.keyMasked}`);
+  assert.equal(state.profile.email, "tester@example.com");
+  pass("状态完整", `余额 ${state.profile.balance}`);
+} catch (error) {
+  fail("状态与余额", error);
+}
+
+console.log("\n[5] 再次登录（同一账号复用密钥）");
+try {
+  const before = sub2api.keys.length;
+  const data = await json(harness.base, "/api/sub2api/auth", {
+    email: "tester@example.com",
+    password: "secret-123",
+  });
+  assert.equal(data.mode, "login");
+  assert.equal(sub2api.keys.length, before, "重复登录不应新建密钥");
+  pass("复用了已有 dsh 密钥");
+} catch (error) {
+  fail("再次登录", error);
+}
+
+console.log("\n[6] 错误密码");
+try {
+  await json(harness.base, "/api/sub2api/auth", {
+    email: "tester@example.com",
+    password: "wrong-password",
+  });
+  fail("错误密码", new Error("应当失败却成功了"));
+} catch (error) {
+  assert.match(error.message, /密码/, `提示不准确：${error.message}`);
+  pass("错误密码被拒绝", error.message);
+}
+
+console.log("\n[7] 适配器：模型列表与流式对话");
+try {
+  const { adapter } = host.registered.adapters[0];
+  const models = await adapter.listModels("sub2api");
+  assert.equal(models.length, 3, `模型数量 ${models.length}`);
+  assert.ok(models.every((model) => model.provider === "sub2api"));
+
+  const chunks = [];
+  for await (const chunk of adapter.stream({
+    provider: "sub2api",
+    model: "glm-5.2",
+    messages: [{ role: "user", content: [{ type: "text", text: "你好" }] }],
+  })) {
+    chunks.push(chunk);
+  }
+  const text = chunks
+    .filter((chunk) => chunk.type === "text-delta")
+    .map((chunk) => chunk.text)
+    .join("");
+  assert.equal(text, "你好，世界", `流式文本："${text}"`);
+  assert.ok(chunks.some((chunk) => chunk.type === "finish"), "缺少 finish 分片");
+  pass("流式对话通过", `${chunks.length} 个分片`);
+} catch (error) {
+  fail("适配器", error);
+}
+
+console.log("\n[8] 充值");
+try {
+  const order = await json(harness.base, "/api/sub2api/recharge", { amountYuan: 20 });
+  assert.match(order.checkoutUrl, /\/checkout\/SUB/, `checkout 地址异常：${order.checkoutUrl}`);
+  const status = await json(harness.base, "/api/sub2api/recharge/status", { orderNo: order.orderNo });
+  assert.equal(status.tone, "done", `状态 ${JSON.stringify(status)}`);
+  pass("下单并轮询到账", order.orderNo);
+} catch (error) {
+  fail("充值", error);
+}
+
+console.log("\n[9] 充值链接（一级降级路径）");
+try {
+  const link = await json(harness.base, "/api/sub2api/recharge/link", {});
+  assert.match(link.url, /user_id=\d+/);
+  assert.match(link.url, /token=tok-/);
+  pass("生成带身份的重充链接");
+} catch (error) {
+  fail("充值链接", error);
+}
+
+console.log("\n[10] 兑换码");
+try {
+  const data = await json(harness.base, "/api/sub2api/redeem", { code: "GIFT" });
+  assert.equal(data.result.new_balance, 5);
+  assert.equal(data.profile.balance, 5);
+  pass("兑换码入账", `余额 ${data.profile.balance}`);
+} catch (error) {
+  fail("兑换码", error);
+}
+
+console.log("\n[11] 工具");
+try {
+  // Tools load through a dynamic import, so give that turn a moment to settle.
+  for (let i = 0; i < 40 && host.registered.tools.length === 0; i += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  const status = host.registered.tools.find((tool) => tool.name === "sub2api_status");
+  assert.ok(status, "缺少 sub2api_status 工具");
+  const value = await status.execute({});
+  assert.equal(value.loggedIn, true);
+  assert.ok(value.message.includes("余额"), value.message);
+
+  const modelsTool = host.registered.tools.find((tool) => tool.name === "sub2api_models");
+  const listed = await modelsTool.execute({ limit: 2 });
+  assert.equal(listed.models.length, 2);
+  pass("工具可调用", value.message);
+} catch (error) {
+  fail("工具", error);
+}
+
+console.log("\n[12] 登出");
+try {
+  await json(harness.base, "/api/sub2api/logout", {});
+  const state = await json(harness.base, "/api/sub2api/status");
+  assert.equal(state.loggedIn, false);
+  assert.equal(state.hasKey, false);
+  assert.equal(credentials._refs.get("SUB2API_API_KEY"), undefined, "凭据应当被清除");
+  pass("登出清理完整");
+} catch (error) {
+  fail("登出", error);
+}
+
+await rm(cachePath, { force: true });
+await harness.close();
+await sub2api.close();
+await payCenter.close();
+
+const failed = results.filter((entry) => !entry.ok);
+console.log(`\n${results.length - failed.length}/${results.length} 通过`);
+if (failed.length > 0) {
+  for (const entry of failed) console.log(`失败：${entry.label} — ${entry.detail}`);
+  process.exitCode = 1;
+}

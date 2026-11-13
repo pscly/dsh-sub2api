@@ -1,0 +1,16 @@
+# dsh-sub2api bundle layer.
+#
+# One plugin row: registers the `sub2api` provider route, its Models-page card,
+# and the /api/sub2api/* routes the browser panel talks to.
+#
+# `name` must be the FULL package specifier as installed in the profile's
+# node_modules, quoted (a YAML scalar starting with `@` would parse as a
+# directive). This package is unscoped, so the bare name is correct — but the
+# rule still applies if it is ever published under a scope.
+- insert:
+    - id: llm-sub2api
+      name: "dsh-sub2api"
+      config:
+        apiBase: "https://sub.pscly.cc"
+        payBase: "https://pay.pscly.cc"
+        apiKeyEnv: SUB2API_API_KEY

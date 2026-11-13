@@ -227,6 +227,24 @@ Cannot switch to sub2api/...: no context capacity; configure contextWindow on th
 
 ---
 
+## 常见报错
+
+### `https://sub.pscly.cc/v1 could not be reached or the connection dropped: fetch failed`
+
+这是**传输层**的失败（不是网关返回的业务错误）：TCP/TLS 连接没建立起来，或者建立后被对端断开。
+
+排查顺序：
+
+1. **先看是不是偶发**。插件现在会在**首个字节之前**自动重试一次（`transportRetries`，默认 1），偶发的 socket 重置会被这一步吃掉，用户看不到。
+2. **看上下文规模**。如果你在推 100 万 token 级的长上下文（本站实测 1M 上下文单次首字 30–40 秒），等待首字节的时间会很长；Node 内建 fetch 的响应头超时是 300 秒，超过就会以 `fetch failed` 形式失败。
+3. **看网关日志**。`docker logs sub2api | grep -iE "reset|canceled|EOF"`；如果网关侧完全没有这条请求的记录，问题在链路上（DNS/CDN/代理），不在网关。
+
+> 报错里的 URL 显示成 `/v1` 是传输层只上报 base 的结果；插件会把它改写成真正失败的那条路径 `/chat/completions`，并带上重试次数。
+
+### `Cannot switch to sub2api/...: no context capacity`
+
+见上文[上下文窗口](#上下文窗口)，在面板里给这个模型手填容量即可。
+
 ## 开发
 
 ```sh

@@ -41,8 +41,9 @@ async function json(base, path, body) {
   return payload.data;
 }
 
+const chatHooks = { onChatBody: (body) => { lastChatBody = body; }, dropChatTimes: 0 };
 let lastChatBody;
-const sub2api = startFakeSub2Api({ onChatBody: (body) => { lastChatBody = body; } });
+const sub2api = startFakeSub2Api(chatHooks);
 const sub2apiBase = await sub2api.listen();
 const payCenter = startFakePayCenter({ sub2apiBase });
 const payBase = await payCenter.listen();
@@ -304,6 +305,40 @@ try {
   pass("额度按人民币计价，倍率来自配置");
 } catch (error) {
   fail("额度单位", error);
+}
+
+console.log("\n[7.6] 连接中断自动重试");
+try {
+  const { adapter } = host.registered.adapters[0];
+  const ask = async () => {
+    const chunks = [];
+    for await (const chunk of adapter.stream({
+      provider: "sub2api",
+      model: "glm-5.2",
+      messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+    })) {
+      chunks.push(chunk);
+    }
+    return chunks;
+  };
+
+  // One drop, then the gateway answers: the retry must hide it.
+  chatHooks.dropChatTimes = 1;
+  const retried = await ask();
+  const text = retried.filter((c) => c.type === "text-delta").map((c) => c.text).join("");
+  assert.equal(text, "你好，世界", "重试后应当正常出词");
+
+  // Repeated drops exhaust the budget and must name the endpoint.
+  chatHooks.dropChatTimes = 99;
+  await assert.rejects(ask, (error) => {
+    assert.match(String(error.message), /chat\/completions/, `消息：${error.message}`);
+    assert.match(String(error.message), /已重试 1 次/, `消息：${error.message}`);
+    return true;
+  });
+  chatHooks.dropChatTimes = 0;
+  pass("中断重试 + 可读的错误信息");
+} catch (error) {
+  fail("连接中断重试", error);
 }
 
 console.log("\n[8] 充值");

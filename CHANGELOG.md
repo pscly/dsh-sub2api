@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.6
+
+- Retry a dropped connection once before the first chunk. The transport reports
+  these as `TRANSPORT` and the host's retry budget is shared with every other
+  failure class, so one reset could exhaust it and surface as a terminal error.
+  A retry is safe there: nothing was shown and nothing was billed.
+- Name the path that actually failed. The transport reports the connection's
+  base URL, so the message read "https://host/v1 could not be reached" while the
+  request went to `/v1/chat/completions`; it now says `/chat/completions`, how
+  many times it retried, and points at `streamIdleTimeoutMs` for long contexts.
+- `transportRetries` (0-5, default 1) and a README troubleshooting section for
+  this error.
+
 ## 0.2.5
 
 - 0.2.4's failure back-off also swallowed the retry a top-up was supposed to

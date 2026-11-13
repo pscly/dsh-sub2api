@@ -191,6 +191,16 @@ export function startFakeSub2Api(hooks = {}) {
       const key = keys.find((entry) => entry.key === token);
       if (!key) return sendJson(res, 401, { error: { message: "API_KEY_REQUIRED" } });
       hooks.onChatBody?.(body);
+
+      // Simulate a dropped connection: the socket dies before any response,
+      // which is exactly what the transport reports as TRANSPORT.
+      if (hooks.dropChatTimes > 0) {
+        hooks.dropChatTimes -= 1;
+        // Destroying the response (not the request) makes the client observe a
+        // socket error promptly; destroying the request leaves undici waiting.
+        res.destroy();
+        return undefined;
+      }
       res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" });
       const chunk = (payload) => res.write(`data: ${JSON.stringify(payload)}\n\n`);
       chunk({ id: "c1", object: "chat.completion.chunk", choices: [{ index: 0, delta: { content: "你好" }, finish_reason: null }] });

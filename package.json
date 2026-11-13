@@ -1,6 +1,6 @@
 {
   "name": "dsh-sub2api",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Sub2API provider for DeepSeek Harness: zero-friction signup, auto-provisioned API key, upstream model sync, balance and recharge",
   "type": "module",
   "license": "GPL-3.0-only",
@@ -28,12 +28,12 @@
       "platform": "web"
     },
     "compatibility": {
-      "dsh": ">=0.2.2-rc.1 <0.2.3"
+      "dsh": ">=0.2.1-rc.2 <0.2.3"
     }
   },
   "dependencies": {
-    "@dsh-ai-providers/core": "0.7.3",
-    "@dsh-ai-providers/openai-compatible": "0.7.3"
+    "@dsh-ai-providers/core": "0.7.0",
+    "@dsh-ai-providers/openai-compatible": "0.7.0"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "~4.1.0",
@@ -51,7 +51,8 @@
     }
   },
   "engines": {
-    "node": ">=24.9"
+    "node": ">=24.9",
+    "dsh": ">=0.2.1-rc.2 <0.2.3"
   },
   "keywords": [
     "dsh",

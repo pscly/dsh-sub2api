@@ -30,6 +30,8 @@
 
 ## 安装
 
+### 普通 DSH（命令行 / Web）
+
 ```sh
 dsh plugin --profile web add dsh-sub2api
 ```
@@ -37,6 +39,36 @@ dsh plugin --profile web add dsh-sub2api
 重启后打开 **设置 → Sub2API**。
 
 > 每个 profile 的插件列表独立：终端界面还需单独装一次。
+
+### DSH Desktop
+
+Desktop 用的就是官方 Harness 插件体系，本插件只依赖官方契约（`llm` / `webServer` / `tools` / `slots`），所以在桌面端原样可用。
+
+在托盘菜单打开的终端里，裸命令默认作用于**当前激活的 profile**：
+
+```sh
+dsh plugin add dsh-sub2api
+```
+
+或者显式指定（Desktop 的默认 profile 叫 `desktop`）：
+
+```sh
+dsh plugin --profile desktop add dsh-sub2api
+```
+
+装完**需要重启 DSH Desktop**，新的 bundle 才会进入 Loader 组合。桌面端不会把插件从一个 profile 复制到另一个，所以命令必须打在你实际在用的那个 profile 上。
+
+**通道兼容性**（`upstream.json` 实测）：
+
+| Desktop 通道 | 内置 DSH | 本插件 |
+|---|---|---|
+| stable | 0.2.1-rc.3 | ✅ |
+| beta | 0.2.2-rc.3 | ✅ |
+| next | 0.2.2-rc.3 | ✅ |
+
+插件声明 `>=0.2.1-rc.2 <0.2.3`，并固定 `@dsh-ai-providers/openai-compatible@0.7.0`——这个版本同时接受 0.2.1 与 0.2.2 两个通道（0.7.3 只接受 0.2.2）。
+
+**从插件市场一键安装的前提**：Desktop 的市场只对满足四个条件的条目提供自动安装——单一 npm 包名、官方 registry 的 `latest` 返回同名稳定版本、包内声明 `dsh.bundle.patch`。本包满足后三项，**还差发布到 npm**。在发布之前，用上面的终端命令安装；GitHub 地址在市场里只会显示为「可浏览」，不会标成可自动安装。
 
 ## 配置
 

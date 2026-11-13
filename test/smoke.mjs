@@ -94,14 +94,18 @@ try {
   const credentialStep = data.steps.find((step) => step.id === "credential");
   assert.ok(credentialStep?.ok, "凭据写入应当成功");
   const catalogStep = data.steps.find((step) => step.id === "catalog");
-  assert.ok(catalogStep?.ok, "模型同步应当成功");
+  assert.equal(catalogStep?.ok, false, "零余额账号拉不到模型");
+  assert.equal(catalogStep?.tone, "warn", "零余额应当是提示而不是错误");
+  assert.equal(data.ready, true, "零余额不应阻止开通");
 
   const createdKey = sub2api.keys[0];
   assert.equal(createdKey.name, "dsh", "密钥名称必须是 dsh");
   assert.ok(credentials._refs.get("SUB2API_API_KEY"), "凭据库应当存有密钥");
   stateAfterAuth = data.state;
   pass("注册后自动建 dsh 密钥并写入凭据", `${sub2api.keys.length} 个密钥`);
-  pass("上游模型已同步", `${stateAfterAuth.models.models.length} 个`);
+  assert.equal(stateAfterAuth.models.models.length, 0, "零余额时模型为空");
+  assert.equal(stateAfterAuth.models.needsRecharge, true, "应当标记为需要充值");
+  pass("零余额被识别为需要充值，而不是静默为空");
 } catch (error) {
   fail("注册 + 自动开通", error);
 }
@@ -143,6 +147,21 @@ try {
 } catch (error) {
   assert.match(error.message, /密码/, `提示不准确：${error.message}`);
   pass("错误密码被拒绝", error.message);
+}
+
+console.log("\n[6.5] 充值后模型解禁");
+try {
+  const before = await json(harness.base, "/api/sub2api/models/refresh", {});
+  assert.equal(before.count, 0, "零余额时仍应为 0");
+  assert.equal(before.error?.code, "INSUFFICIENT_BALANCE", `错误码：${JSON.stringify(before.error)}`);
+
+  await json(harness.base, "/api/sub2api/redeem", { code: "GIFT" });
+  const after = await json(harness.base, "/api/sub2api/models/refresh", {});
+  assert.equal(after.error, null, "有余额后不应再报错");
+  assert.equal(after.count, 3, `同步数量 ${after.count}`);
+  pass("余额到账后模型自动解禁", `${after.count} 个`);
+} catch (error) {
+  fail("充值后模型解禁", error);
 }
 
 console.log("\n[7] 适配器：模型列表与流式对话");
@@ -195,8 +214,8 @@ try {
 console.log("\n[10] 兑换码");
 try {
   const data = await json(harness.base, "/api/sub2api/redeem", { code: "GIFT" });
-  assert.equal(data.result.new_balance, 5);
-  assert.equal(data.profile.balance, 5);
+  assert.equal(data.result.new_balance, 10, "第二次兑换后余额应为 10");
+  assert.equal(data.profile.balance, 10);
   pass("兑换码入账", `余额 ${data.profile.balance}`);
 } catch (error) {
   fail("兑换码", error);

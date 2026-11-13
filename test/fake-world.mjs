@@ -164,6 +164,13 @@ export function startFakeSub2Api(hooks = {}) {
     if (path === "/v1/models" && req.method === "GET") {
       const key = keys.find((entry) => entry.key === token);
       if (!key) return sendJson(res, 401, { error: { message: "API_KEY_REQUIRED" } });
+      // The real gateway gates the catalog on balance: a fresh account answers
+      // 403 INSUFFICIENT_BALANCE until it is credited. The fake reproduces it,
+      // because that gate is the whole reason the picker starts empty.
+      const owner = [...users.values()].find((candidate) => candidate.id === key.user_id);
+      if (owner && owner.balance <= 0) {
+        return sendJson(res, 403, { code: "INSUFFICIENT_BALANCE", message: "Insufficient account balance" });
+      }
       return sendJson(res, 200, {
         object: "list",
         data: [

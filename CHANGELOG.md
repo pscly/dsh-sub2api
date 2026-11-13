@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.4
+
+- Never create an ungrouped key. With more than one group on offer and no
+  `allowed_groups` on the account, selection returned nothing, the key was
+  created without a group, and the gateway rejected it with a permission error
+  — the catalog could never load. Selection now prefers a group whose platform
+  matches this plugin's protocol (openai), then a non-exclusive one.
+- Stop rendering `[object Object]`. The gateway reports key and permission
+  faults in OpenAI's `{error:{message,type}}` shape, which has no top-level
+  `message`; casting `body.error` to a string produced that placeholder. Error
+  bodies are now unwrapped properly, `describe()` refuses to stringify an
+  object, and the panel renders text only.
+- The report heading now says 开通未完成 only when a blocking step failed.
+
 ## 0.1.3
 
 - Drop the manual-reconciliation copy. The recharge hint no longer promises a

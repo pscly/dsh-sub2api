@@ -89,7 +89,7 @@ dsh plugin --profile desktop add dsh-sub2api
 | `payBase` | `https://pay.pscly.cc` | 充值中转站地址 |
 | `apiKeyEnv` | `SUB2API_API_KEY` | 存 API Key 的凭据引用名 |
 | `keyName` | `dsh` | 自动创建的密钥名 |
-| `groupId` | 自动选择 | 强制指定密钥所属分组 |
+| `groupId` | 自动选择 | 强制指定密钥所属分组（自动选择见下） |
 | `requestTimeoutMs` | 300000 | 普通请求超时 |
 | `streamIdleTimeoutMs` | 300000 | 流式请求空闲超时 |
 | `modelsCachePath` | `$DSH_HOME/sub2api-models.json` | 模型目录缓存 |
@@ -115,6 +115,16 @@ dsh plugin --profile desktop add dsh-sub2api
 - 所有 `/api/sub2api/*` 路由只接受本机回环请求，非本机一律 403。
 - 日志与错误信息不包含 token、密钥或密码。
 - 支付链接里的 `token` 是 sub2api 的访问令牌，只在用户点「去支付」时生成，不写日志、不落盘。
+
+## 密钥建在哪个分组
+
+网关会拒绝**没有分组的密钥**（`API key is not assigned to a group`），所以自动选择必须有确定结果：
+
+1. 配置里的 `groupId`
+2. 账号的 `allowed_groups` 里能匹配到的组
+3. 只有一个组时，就用它
+4. 多个组时，优先 `platform` 为 `openai` 的组（中间层走的是 `chat/completions`，别的平台的组服务不了）
+5. 否则取第一个非独占组
 
 ## 余额为 0 时为什么没有模型
 

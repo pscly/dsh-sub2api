@@ -143,6 +143,75 @@ try {
   fail("schema 接线", error);
 }
 
+console.log("\n[H] 错误信息不再变成 [object Object]");
+try {
+  const { createServer } = await import("node:http");
+  const { Sub2ApiApi } = await import("../lib/sub2api/api.js");
+  const { describe } = await import("../lib/sub2api/provision.js");
+  const { readableMessage } = await import("../lib/util.js");
+
+  // The gateway answers key/permission faults in OpenAI's shape, which has no
+  // top-level `message` -- casting `body.error` to a string is what produced
+  // "[object Object]" in the panel.
+  const shapes = [
+    [{ error: { message: "API key is not assigned to a group", type: "permission_error" } }, 403, "API key is not assigned to a group"],
+    [{ error: { type: "permission_error" } }, 403, "permission_error"],
+    [{ code: "INSUFFICIENT_BALANCE", message: "Insufficient account balance" }, 403, "Insufficient account balance"],
+    [{}, 500, "HTTP 500"],
+  ];
+  for (const [body, status, expected] of shapes) {
+    assert.equal(readableMessage(body, status), expected, JSON.stringify(body));
+  }
+
+  const server = createServer((req, res) => {
+    res.writeHead(403, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: { message: "API key is not assigned to a group", type: "permission_error" } }));
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const { port } = server.address();
+
+  const api = new Sub2ApiApi({ apiBase: () => `http://127.0.0.1:${port}`, timeoutMs: () => 5000 });
+  await assert.rejects(
+    () => api.gatewayModels("sk-nope"),
+    (error) => {
+      assert.equal(error.message, "API key is not assigned to a group");
+      assert.ok(!error.message.includes("[object Object]"));
+      return true;
+    },
+  );
+  await new Promise((resolve) => server.close(resolve));
+
+  assert.equal(describe(new Error("boom")), "boom");
+  assert.equal(describe({ message: "plain" }), "plain");
+  assert.equal(describe({ code: 42 }), '{"code":42}');
+  assert.ok(!describe({ weird: true }).includes("[object Object]"));
+  pass("三种错误体都能读出可读文案");
+} catch (error) {
+  fail("错误信息可读性", error);
+}
+
+console.log("\n[I] 选组：不允许出现无分组密钥");
+try {
+  const { chooseGroup } = await import("../lib/sub2api/provision.js");
+  const two = [
+    { id: 21, name: "用户", platform: "openai", status: "active", is_exclusive: false },
+    { id: 25, name: "jeykey", platform: "typesafe", status: "active", is_exclusive: false },
+  ];
+  assert.equal(chooseGroup({ groups: two, allowed: null }), 21, "多组时选 OpenAI 平台组");
+  assert.equal(chooseGroup({ groups: two, allowed: [25] }), 25, "allowed 优先");
+  assert.equal(chooseGroup({ groups: two, forced: 25, allowed: [21] }), 25, "forced 最优先");
+  assert.equal(chooseGroup({ groups: [two[0]], allowed: null }), 21, "单组直接用");
+  assert.equal(
+    chooseGroup({ groups: [{ id: 9, status: "active", platform: "anthropic" }], allowed: null }),
+    9,
+    "没有 openai 组时退回唯一组",
+  );
+  assert.equal(chooseGroup({ groups: [], allowed: null }), undefined, "无组时 undefined");
+  pass("选组不会留下无分组密钥");
+} catch (error) {
+  fail("选组", error);
+}
+
 const failed = results.filter((entry) => !entry.ok);
 console.log(`\n${results.length - failed.length}/${results.length} 通过`);
 if (failed.length > 0) process.exitCode = 1;

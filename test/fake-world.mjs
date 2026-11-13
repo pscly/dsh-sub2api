@@ -364,7 +364,7 @@ export function createFakeCredentials() {
 /** A minimal host context: only the services this plugin touches. */
 export function createFakeHost() {
   const services = new Map();
-  const registered = { providers: [], adapters: [], routes: [], tools: [], sections: [], discoveries: [] };
+  const registered = { providers: [], adapters: [], routes: [], tools: [], sections: [], discoveries: [], replaced: [] };
   const disposers = [];
 
   const ctx = {
@@ -388,8 +388,12 @@ export function createFakeHost() {
         return () => {};
       },
       registerAdapter(providers, adapter) {
+        // The real handle is callable and carries `replace`, whose only job is
+        // to publish llm/adapters-updated so the picker refetches.
         registered.adapters.push({ providers, adapter });
-        return () => {};
+        const handle = () => {};
+        handle.replace = (next) => registered.replaced.push(next);
+        return handle;
       },
       registerModelDiscovery(ns, discover) {
         registered.discoveries.push({ ns, discover });

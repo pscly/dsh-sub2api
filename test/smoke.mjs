@@ -164,6 +164,36 @@ try {
   fail("充值后模型解禁", error);
 }
 
+console.log("\n[6.6] 模型可见性与选择器刷新");
+try {
+  // A successful sync must announce itself, or an open picker keeps the empty
+  // directory it built before the first login.
+  assert.ok(host.registered.replaced.length > 0, "同步后应当调用 replace() 通知选择器");
+
+  const before = await json(harness.base, "/api/sub2api/models", undefined);
+  assert.equal(before.all.length, 3, `全量 ${before.all.length}`);
+  assert.deepEqual(before.allowed, [], "默认不限制");
+
+  const only = await json(harness.base, "/api/sub2api/models/visible", { ids: ["glm-5.2"] });
+  assert.deepEqual(only.models.allowed, ["glm-5.2"]);
+  assert.equal(only.models.models.length, 1, "只显示勾选的模型");
+
+  const { adapter } = host.registered.adapters[0];
+  const listed = await adapter.listModels("sub2api");
+  assert.equal(listed.length, 1, "选择器接口也只剩下勾选的那个");
+
+  const all = await json(harness.base, "/api/sub2api/models/visible", { ids: [] });
+  assert.equal(all.models.models.length, 3, "清空选择后恢复全部");
+
+  await assert.rejects(
+    () => json(harness.base, "/api/sub2api/models/visible", { ids: ["nope"] }),
+    /不在当前目录/,
+  );
+  pass("可见模型可保存、可生效、可清空");
+} catch (error) {
+  fail("模型可见性", error);
+}
+
 console.log("\n[7] 适配器：模型列表与流式对话");
 try {
   const { adapter } = host.registered.adapters[0];

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.6
+
+- Make the chat model picker see a fresh catalog. It rebuilds itself from
+  `llm/adapters-updated`, and the plugin never published one, so a session
+  opened before the first sync kept an empty provider until the page reloaded.
+  Refreshing the catalog now swaps the adapter route set, which is the
+  documented way to announce the change.
+- Add a model allowlist: the panel's 模型 card lists every upstream model with
+  checkboxes, stores the choice in `$DSH_HOME/sub2api-selection.json`, and
+  `listModels` honours it, so the picker shows exactly what was chosen. All
+  boxes ticked means no restriction; the `visibleModels` config still wins when
+  an operator sets it.
+
 ## 0.1.5
 
 - Published to npm as `dsh-sub2api`, which is what DSH Desktop's community

@@ -201,6 +201,15 @@ export function startFakeSub2Api(hooks = {}) {
         res.destroy();
         return undefined;
       }
+
+      // The openresty in front of the gateway answers this while the Go backend
+      // restarts, which is the second failure the plugin has to absorb.
+      if (hooks.gateway502Times > 0) {
+        hooks.gateway502Times -= 1;
+        res.writeHead(502, { "Content-Type": "text/html" });
+        res.end("<html><head><title>502 Bad Gateway</title></head><body><center><h1>502 Bad Gateway</h1></center><hr><center>openresty</center></body></html>");
+        return undefined;
+      }
       res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" });
       const chunk = (payload) => res.write(`data: ${JSON.stringify(payload)}\n\n`);
       chunk({ id: "c1", object: "chat.completion.chunk", choices: [{ index: 0, delta: { content: "你好" }, finish_reason: null }] });

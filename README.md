@@ -227,6 +227,27 @@ Cannot switch to sub2api/...: no context capacity; configure contextWindow on th
 
 ---
 
+## 自动重试
+
+回答还没吐出第一个字之前，插件会自动重试这几类失败：
+
+| 类型 | 典型表现 | 默认重试 |
+|---|---|---|
+| 连接中断 | `fetch failed`、`could not be reached`、socket reset | ✅ |
+| 网关 5xx | openresty 返回 `502 Bad Gateway`（后端重启/上游账号异常） | ✅ |
+| 限流 | HTTP 429 | ✅ |
+| 空响应 | 200 但没有任何内容 | ✅ |
+| 业务错误 | 401/403、余额不足、超长上下文 | ❌ 立即返回 |
+
+已经吐出内容之后**绝不重试**——否则会把半截回答拼成两遍。
+
+```yaml
+llm-sub2api:
+  retries: 2   # 0 关闭，最大 5
+```
+
+> 取舍：极少数情况下，网关其实已经受理并计费，只是响应在返回途中丢了，这时重试会多算一次。窗口很小，但如果你更在意账目精确，把 `retries` 设为 0。
+
 ## 常见报错
 
 ### `https://sub.pscly.cc/v1 could not be reached or the connection dropped: fetch failed`
@@ -240,6 +261,16 @@ Cannot switch to sub2api/...: no context capacity; configure contextWindow on th
 3. **看网关日志**。`docker logs sub2api | grep -iE "reset|canceled|EOF"`；如果网关侧完全没有这条请求的记录，问题在链路上（DNS/CDN/代理），不在网关。
 
 > 报错里的 URL 显示成 `/v1` 是传输层只上报 base 的结果；插件会把它改写成真正失败的那条路径 `/chat/completions`，并带上重试次数。
+
+### `the endpoint answered 502 Bad Gateway: <html>...openresty</html>`
+
+这是**网关前面的 openresty 返回的**，不是模型的问题：sub2api 的 Go 后端当时不可用（重启中），或者上游账号被判定不可用正在切换。
+
+插件会自动重试（见上），连续失败才会抛给你。持续出现时看后端状态：
+
+```bash
+ssh pshk 'docker ps | grep sub2api; docker logs --tail 50 sub2api'
+```
 
 ### `Cannot switch to sub2api/...: no context capacity`
 

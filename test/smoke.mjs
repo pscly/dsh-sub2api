@@ -41,7 +41,7 @@ async function json(base, path, body) {
   return payload.data;
 }
 
-const chatHooks = { onChatBody: (body) => { lastChatBody = body; }, dropChatTimes: 0 };
+const chatHooks = { onChatBody: (body) => { lastChatBody = body; }, dropChatTimes: 0, gateway502Times: 0 };
 let lastChatBody;
 const sub2api = startFakeSub2Api(chatHooks);
 const sub2apiBase = await sub2api.listen();
@@ -332,11 +332,25 @@ try {
   chatHooks.dropChatTimes = 99;
   await assert.rejects(ask, (error) => {
     assert.match(String(error.message), /chat\/completions/, `消息：${error.message}`);
-    assert.match(String(error.message), /已重试 1 次/, `消息：${error.message}`);
+    assert.match(String(error.message), /已重试 2 次/, `消息：${error.message}`);
     return true;
   });
   chatHooks.dropChatTimes = 0;
-  pass("中断重试 + 可读的错误信息");
+
+  // A 502 from the edge is retried the same way, and reported without the HTML.
+  chatHooks.gateway502Times = 1;
+  const afterGatewayError = await ask();
+  assert.ok(afterGatewayError.some((c) => c.type === "text-delta"), "502 之后应当出词");
+
+  chatHooks.gateway502Times = 99;
+  await assert.rejects(ask, (error) => {
+    assert.match(String(error.message), /502/, `消息：${error.message}`);
+    assert.match(String(error.message), /网关/, `消息：${error.message}`);
+    assert.ok(!error.message.includes("<html>"), "不应把 HTML 原样丢给用户");
+    return true;
+  });
+  chatHooks.gateway502Times = 0;
+  pass("断连与 502 都会重试，并以可读文案失败");
 } catch (error) {
   fail("连接中断重试", error);
 }

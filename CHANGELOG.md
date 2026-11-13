@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.7
+
+- Retry 5xx and 429, not just dropped connections. The openresty in front of the
+  gateway answers 502 while the Go backend restarts; the same request a second
+  later succeeds.
+- Read the real failure class. The transport's error carries it in `failure`
+  (`SERVER`, `TRANSPORT`, …) while `code` is the seam-level bucket
+  (`unavailable`), so routing on `code` treated every provider fault as one kind
+  — the 502 path was never taken.
+- Report HTTP failures as sentences instead of raw HTML, and name the status.
+- `retries` replaces `transportRetries` (the old key still works), default 2,
+  with quadratic backoff. Retries stop at the first streamed chunk.
+
 ## 0.2.6
 
 - Retry a dropped connection once before the first chunk. The transport reports

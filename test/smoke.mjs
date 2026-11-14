@@ -365,7 +365,8 @@ try {
   // A 5xx that carries a proxy's connect timeout to an internal host.
   chatHooks.proxyTimeoutTimes = 99;
   await assert.rejects(ask, (error) => {
-    assert.match(String(error.message), /上游代理/, `消息：${error.message}`);
+    assert.match(String(error.message), /代理连不上/, `消息：${error.message}`);
+    // The body names a redacted private host, so the message may say so.
     assert.match(String(error.message), /内网|VPN/, `消息：${error.message}`);
     return true;
   });

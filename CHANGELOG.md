@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.12
+
+- Stop dropping `<private-host>`-style placeholders while stripping HTML from an
+  upstream error body. A blanket `<[^>]+>` removed exactly the part that says
+  where the failure happened; only real HTML element names are stripped now.
+- The proxy-timeout message no longer asserts an internal network unless the
+  body actually names one. It otherwise says the error is the upstream's own
+  text, passed through, and points at the gateway log for the account id.
+
 ## 0.2.11
 
 - Recognize a 5xx whose body is a proxy's network failure

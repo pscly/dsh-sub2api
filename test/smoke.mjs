@@ -41,7 +41,7 @@ async function json(base, path, body) {
   return payload.data;
 }
 
-const chatHooks = { onChatBody: (body) => { lastChatBody = body; }, dropChatTimes: 0, gateway502Times: 0 };
+const chatHooks = { onChatBody: (body) => { lastChatBody = body; }, dropChatTimes: 0, gateway502Times: 0, upstream502Times: 0 };
 let lastChatBody;
 const sub2api = startFakeSub2Api(chatHooks);
 const sub2apiBase = await sub2api.listen();
@@ -350,6 +350,18 @@ try {
     return true;
   });
   chatHooks.gateway502Times = 0;
+
+  // The sentence sub2api uses when its own account pool is dry: retrying is
+  // still attempted, but the message must say where the problem is.
+  chatHooks.upstream502Times = 99;
+  await assert.rejects(ask, (error) => {
+    assert.match(String(error.message), /上游暂时不可用/, `消息：${error.message}`);
+    assert.match(String(error.message), /没有可用账号/, `消息：${error.message}`);
+    assert.ok(String(error.message).length < 400, "消息不应过长");
+    return true;
+  });
+  chatHooks.upstream502Times = 0;
+
   pass("断连与 502 都会重试，并以可读文案失败");
 } catch (error) {
   fail("连接中断重试", error);

@@ -277,6 +277,31 @@ llm-sub2api:
 
 从 0.2.8 起，宿主会在启动日志里写一行 `[sub2api] 面板路由已注册：N 条（vX.Y.Z）`——**有这行就说明后端活着**，没有就是没挂载，日志里会同时给出原因（缺 `webServer`、provider 注册被拒等）。
 
+### `the endpoint answered 502 Bad Gateway: Upstream service temporarily unavailable`
+
+这句是 **sub2api 自己**返回的（不是 openresty 的错误页），含义是「我的上游失败了」。最常见的原因是**该模型此刻没有可用账号**，网关日志会写得很清楚：
+
+```bash
+ssh pskh 'docker logs --since 1h sub2api | grep account_select_failed | tail -5'
+```
+
+```
+"error":"no available OpenAI accounts supporting model: deepseek-v4.1-flash
+ (pool=4, filtered: excluded=1 model_not_supported=2 runtime_blocked=1)"
+```
+
+括号里就是原因分解：池子里 4 个账号，1 个被排除、2 个不支持这个模型、1 个被运行时拉黑。
+
+**这是网关侧的容量问题，插件重试也变不出账号。** 处理方式：
+
+| 计数 | 含义 | 怎么办 |
+|---|---|---|
+| `model_not_supported` | 账号的模型清单里没有这个模型 | 在后台给账号补上模型映射 |
+| `runtime_blocked` | 连续失败被临时拉黑 | 等冷却，或查该账号的上游报错 |
+| `excluded` | 被分组/规则排除 | 检查分组绑定 |
+
+插件会把这句话翻译成中文并说明「不是插件本身的问题」，但真正的修复在网关。
+
 ### `the endpoint answered 502 Bad Gateway: <html>...openresty</html>`
 
 这是**网关前面的 openresty 返回的**，不是模型的问题：sub2api 的 Go 后端当时不可用（重启中），或者上游账号被判定不可用正在切换。

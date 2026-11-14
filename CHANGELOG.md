@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.10
+
+- Recognize sub2api's own "Upstream service temporarily unavailable" 502 and say
+  what it means: the gateway has no usable upstream account for that model right
+  now, so this is not a plugin fault and retrying cannot conjure capacity. The
+  message names the condition and suggests waiting or switching models.
+- README documents the gateway log line that breaks the pool down
+  (`excluded` / `model_not_supported` / `runtime_blocked`).
+
 ## 0.2.9
 
 - Mount the panel routes by **waiting for `webServer`**, not by sampling it once

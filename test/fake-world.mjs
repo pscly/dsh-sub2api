@@ -386,6 +386,8 @@ export function createFakeHost() {
   const services = new Map();
   const registered = { providers: [], adapters: [], routes: [], tools: [], sections: [], discoveries: [], replaced: [], pending: [] };
   const disposers = [];
+  /** Injection callbacks waiting for a service that has not been provided yet. */
+  const pendingInjections = [];
 
   const ctx = {
     logger: { info() {}, warn() {}, error() {} },
@@ -402,11 +404,23 @@ export function createFakeHost() {
       if (typeof dispose === "function") disposers.push(dispose);
       return dispose;
     },
-    /** Nested injection: run the callback when every named service exists. */
+    /**
+     * Nested injection: run the callback once every named service exists.
+     *
+     * A service registered by a later plugin is the normal case — the real host
+     * mounts `webServer` after the plugin that needs it — so a pending callback
+     * has to run when the service finally appears.
+     */
     inject(names, run) {
-      const ready = names.every((name) => services.has(name));
-      if (ready) run(ctx);
-      else registered.pending.push(names.join(","));
+      const attempt = () => {
+        if (!names.every((name) => services.has(name))) return false;
+        run(ctx);
+        return true;
+      };
+      if (!attempt()) {
+        registered.pending.push(names.join(","));
+        pendingInjections.push(attempt);
+      }
       return () => {};
     },
     llm: {
@@ -456,7 +470,15 @@ export function createFakeHost() {
   services.set("systemPrompt", ctx.systemPrompt);
   services.set("llm", ctx.llm);
 
-  return { ctx, services, registered, disposers };
+  /** Provide a service after apply, as a later-loading plugin would. */
+  function provide(name, service) {
+    services.set(name, service);
+    for (const attempt of [...pendingInjections]) {
+      if (attempt()) pendingInjections.splice(pendingInjections.indexOf(attempt), 1);
+    }
+  }
+
+  return { ctx, services, registered, disposers, provide };
 }
 
 /** Serve the plugin's own routes so the test can drive them over HTTP. */

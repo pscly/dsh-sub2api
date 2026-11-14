@@ -342,6 +342,26 @@ try {
   fail("provider 注册失败降级", error);
 }
 
+console.log("\n[M] webServer 晚于插件注册时，路由仍要挂上");
+try {
+  const host = createFakeHost();
+  host.services.set("credentials", createFakeCredentials());
+  // The real host registers `webServer` from a plugin that loads after this
+  // one; sampling it once during apply is what produced a 404 panel.
+  host.services.delete("webServer");
+
+  apply(host.ctx, { apiBase: "http://127.0.0.1:1", payBase: "http://127.0.0.1:1" });
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.equal(host.registered.routes.length, 0, "服务还没出现时不应注册");
+
+  host.provide("webServer", host.ctx.webServer);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.ok(host.registered.routes.length > 0, "服务出现后必须补注册");
+  pass("等待 webServer 后再挂路由", `${host.registered.routes.length} 条`);
+} catch (error) {
+  fail("延迟注册 webServer", error);
+}
+
 const failed = results.filter((entry) => !entry.ok);
 console.log(`\n${results.length - failed.length}/${results.length} 通过`);
 if (failed.length > 0) process.exitCode = 1;

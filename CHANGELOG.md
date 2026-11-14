@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.9
+
+- Mount the panel routes by **waiting for `webServer`**, not by sampling it once
+  during `apply`. The service is registered by a plugin that loads after this
+  one, so `ctx.get("webServer")` was undefined at that moment and every
+  `/api/sub2api/*` route was silently skipped — the settings page then showed
+  only "HTTP 404：响应不是 JSON". Found by installing the plugin into a real
+  DSH profile and watching it 404.
+- Same treatment for `llm` and `webServer` on hosts without `ctx.inject`.
+
 ## 0.2.8
 
 - The panel no longer depends on the provider registration succeeding. A

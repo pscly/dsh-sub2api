@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.11
+
+- Recognize a 5xx whose body is a proxy's network failure
+  (`connect-timeout`, `UND_ERR_CONNECT_TIMEOUT`, `acp-proxy`, …) and say what it
+  means: an upstream proxy could not reach its target, which for an internal
+  address points at the VPN/overlay rather than the plugin.
+- README breaks down the three usual causes and how to check each.
+
 ## 0.2.10
 
 - Recognize sub2api's own "Upstream service temporarily unavailable" 502 and say

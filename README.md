@@ -302,6 +302,20 @@ ssh pskh 'docker logs --since 1h sub2api | grep account_select_failed | tail -5'
 
 插件会把这句话翻译成中文并说明「不是插件本身的问题」，但真正的修复在网关。
 
+### `502 Bad Gateway: acp-proxy failure: connect-timeout UND_ERR_CONNECT_TIMEOUT <private-host>`
+
+这是**某个走内网的代理**返回的原文，被网关透传了出来：它连不上目标主机，超时了。`<private-host>` 是内网地址被打码后的样子。
+
+常见成因：
+
+| 现象 | 原因 | 查法 |
+|---|---|---|
+| 时好时坏，多机互联 | VPN / overlay（如 EasyTier）peer 在抖 | `docker logs --since 2h easytier \| grep -i "connection error"` |
+| 一直失败 | 目标服务没起，或端口不通 | 在代理所在机器 `curl -m 5 http://<内网IP>:<端口>/` |
+| 只有个别模型 | 那个模型绑的账号指向内网 | 网关日志看该请求用了哪个 `account_id` |
+
+插件会把它翻译成「上游代理连不上它的目标（连接超时）」，并说明不是插件本身的问题。
+
 ### `the endpoint answered 502 Bad Gateway: <html>...openresty</html>`
 
 这是**网关前面的 openresty 返回的**，不是模型的问题：sub2api 的 Go 后端当时不可用（重启中），或者上游账号被判定不可用正在切换。

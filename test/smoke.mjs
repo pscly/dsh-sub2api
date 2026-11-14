@@ -41,7 +41,7 @@ async function json(base, path, body) {
   return payload.data;
 }
 
-const chatHooks = { onChatBody: (body) => { lastChatBody = body; }, dropChatTimes: 0, gateway502Times: 0, upstream502Times: 0 };
+const chatHooks = { onChatBody: (body) => { lastChatBody = body; }, dropChatTimes: 0, gateway502Times: 0, upstream502Times: 0, proxyTimeoutTimes: 0 };
 let lastChatBody;
 const sub2api = startFakeSub2Api(chatHooks);
 const sub2apiBase = await sub2api.listen();
@@ -362,7 +362,16 @@ try {
   });
   chatHooks.upstream502Times = 0;
 
-  pass("断连与 502 都会重试，并以可读文案失败");
+  // A 5xx that carries a proxy's connect timeout to an internal host.
+  chatHooks.proxyTimeoutTimes = 99;
+  await assert.rejects(ask, (error) => {
+    assert.match(String(error.message), /上游代理/, `消息：${error.message}`);
+    assert.match(String(error.message), /内网|VPN/, `消息：${error.message}`);
+    return true;
+  });
+  chatHooks.proxyTimeoutTimes = 0;
+
+  pass("断连、502 与内网代理超时都以可读文案失败");
 } catch (error) {
   fail("连接中断重试", error);
 }

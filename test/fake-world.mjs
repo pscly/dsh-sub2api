@@ -204,6 +204,15 @@ export function startFakeSub2Api(hooks = {}) {
 
       // The openresty in front of the gateway answers this while the Go backend
       // restarts, which is the second failure the plugin has to absorb.
+      if (hooks.proxyTimeoutTimes > 0) {
+        hooks.proxyTimeoutTimes -= 1;
+        res.writeHead(502, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({
+          error: { type: "upstream_error", message: "acp-proxy failure: connect-timeout UND_ERR_CONNECT_TIMEOUT <private-host>" },
+        }));
+        return undefined;
+      }
+
       if (hooks.upstream502Times > 0) {
         hooks.upstream502Times -= 1;
         res.writeHead(502, { "Content-Type": "application/json" });

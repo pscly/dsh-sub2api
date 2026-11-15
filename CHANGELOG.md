@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.0
+
+- **Balance badge in the chat input's bottom-right corner**
+  (`conversation.input.right`): the number a user checks before a long request,
+  without opening settings. Green dot normally, amber below ¥5, red at zero —
+  where clicking it opens the payment page instead of refreshing.
+- **One shared status store.** The panel, the sidebar card and the badge used to
+  poll `/status` independently; they now subscribe to a single store with one
+  in-flight request and one 45s timer that stops when nothing is mounted.
+- Skeletons instead of a bare "加载中…", and panel actions report their failure
+  once — the login form keeps its inline message instead of also raising the
+  page-level alert.
+
 ## 0.2.12
 
 - Stop dropping `<private-host>`-style placeholders while stripping HTML from an

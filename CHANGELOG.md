@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.0 — panel rebuilt around what people actually check
+
+- A status header answers "connected? funded? how many models?" in one line,
+  with 刷新 and 充值 where the eye lands. Everything else is folded below it.
+- Sections collapse: 模型 open by default (that is what people change), 充值
+  opens itself when the balance hits zero, 密钥 / 账户 / 诊断 stay out of the way.
+  Each collapsed header still carries the fact you would open it for — the masked
+  key, the email, the balance.
+- Per-action pending state: refreshing models no longer greys out the whole page.
+- Toasts confirm what happened (copied, synced N models, selection saved, key
+  rebuilt, redeemed).
+- The redeem field moved behind 有兑换码？, so the common path is two clicks.
+- Diagnostics no longer owns a card of its own on first paint.
+
 ## 0.3.0
 
 - **Balance badge in the chat input's bottom-right corner**

@@ -96,7 +96,7 @@ try {
   const section = registered.find((entry) => entry.name === "settings.section");
   assert.ok(section, "缺少设置页注册");
   assert.equal(section.id, "sub2api");
-  assert.equal(section.label(), "Sub2API");
+  assert.equal(section.label(), "Psapi");
   assert.equal(typeof section.component, "function");
 
   const sidebar = registered.find((entry) => entry.name === "sidebar.footer.action");

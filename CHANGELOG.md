@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.1
+
+- The panel shows the site as **Psapi** instead of Sub2API, matching the
+  rebranded site. Internal identifiers are untouched: the provider id stays
+  `sub2api`, so existing sessions and model selections keep working.
+- The account card no longer shows the concurrency limit.
+- The pay-centre error matcher accepts either spelling, since the gateway and
+  the billing page are deployed separately and can drift.
+
 ## 0.4.0 — panel rebuilt around what people actually check
 
 - A status header answers "connected? funded? how many models?" in one line,

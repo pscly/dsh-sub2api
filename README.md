@@ -1,8 +1,8 @@
 # dsh-sub2api
 
-把 [Sub2API](https://github.com/Wei-Shaw/sub2api) 中转站接进 DeepSeek Harness（DSH）。
+把自建的 **Psapi**（`sub.pscly.cc`，网关软件是开源的 [sub2api](https://github.com/Wei-Shaw/sub2api)）接进 DeepSeek Harness（DSH）。
 
-装完之后，在 **设置 → Sub2API** 里填一次邮箱和密码就能用：插件自己判断该登录还是注册，注册后自动创建名为 `dsh` 的 API 密钥、写进本机凭据库，并把上游模型同步进模型选择器。余额、用量、订阅、兑换码、充值和技术支持都在同一个面板里。
+装完之后，在 **设置 → Psapi** 里填一次邮箱和密码就能用：插件自己判断该登录还是注册，注册后自动创建名为 `dsh` 的 API 密钥、写进本机凭据库，并把上游模型同步进模型选择器。余额、用量、订阅、兑换码、充值和技术支持都在同一个面板里。
 
 ```
 npm:  dsh-sub2api          https://www.npmjs.com/package/dsh-sub2api
@@ -33,7 +33,7 @@ dsh plugin --profile web add dsh-sub2api
 
 也可以直接在 **插件 → 添加插件** 里搜 `dsh-sub2api`。
 
-重启后打开 **设置 → Sub2API**。
+重启后打开 **设置 → Psapi**。
 
 ### 从 GitHub 装
 
@@ -96,7 +96,7 @@ dsh plugin add dsh-sub2api
 
 ### 账户
 
-邮箱、余额、并发数、今日/累计用量，以及订阅进度条（日/周/月）。未登录时是登录表单：一个邮箱 + 一个密码 + 一个「继续」按钮。
+邮箱、余额、今日/累计用量，以及订阅进度条（日/周/月）。并发数不展示（站点侧也已对用户隐藏）。未登录时是登录表单：一个邮箱 + 一个密码 + 一个「继续」按钮。
 
 **一个表单两种结果**：先试登录，只有「凭据错误」才自动注册。所以
 
@@ -203,7 +203,7 @@ Agent 工具（只读）：`sub2api_status`、`sub2api_models`。模型可以回
 
 ### 2. 余额为 0 拿不到模型，到账后自动同步
 
-Sub2API 的网关对 `/v1/models` 有余额门槛，零余额直接 `403 INSUFFICIENT_BALANCE`：
+Psapi 的网关对 `/v1/models` 有余额门槛，零余额直接 `403 INSUFFICIENT_BALANCE`：
 
 ```
 [200] POST /api/v1/keys         → 正常返回明文 key

@@ -106,6 +106,31 @@ try {
   fail("插槽注册", error);
 }
 
+console.log("\n[client] 折叠状态记忆");
+try {
+  const api = moduleExports;
+  const sections = api.__sections;
+  assert.ok(sections, "没有导出折叠状态工具");
+
+  globalThis.window.localStorage = {
+    getItem: () => JSON.stringify({ recharge: true, account: false }),
+    setItem: () => {},
+  };
+  const restored = sections.readOpenSections();
+  assert.equal(restored.recharge, true, "已展开的区块应保持展开");
+  assert.equal(restored.account, false, "已折叠的区块应保持折叠");
+  assert.equal(restored.models, true, "未记录的区块用默认值");
+
+  globalThis.window.localStorage = {
+    getItem: () => { throw new Error("storage disabled"); },
+    setItem: () => {},
+  };
+  assert.deepEqual(sections.readOpenSections(), sections.DEFAULT_OPEN, "读取失败应回落到默认展开");
+  pass("折叠状态记忆", "恢复与降级都对");
+} catch (error) {
+  fail("折叠状态记忆", error);
+}
+
 console.log("\n[client] 缺少插槽时的降级");
 try {
   // A host without the sidebar slot must not break the settings page.

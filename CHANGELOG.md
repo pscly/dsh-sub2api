@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.4.2
+
+Recharge and key handling, which are the two places where a mistake costs
+something real.
+
+- **Order countdown and recovery.** The pay centre expires an unpaid order after
+  30 minutes; the panel now counts it down, says so in plain words when it runs
+  out, and offers "重新打开支付页" so a closed tab is not a lost order.
+- **"去支付" cannot be double-clicked** into two tabs, and a failed status poll
+  now says so instead of quietly stopping.
+- **Rebuilding the key takes two clicks.** It revokes the key DSH is using right
+  now, so it asks once — with the button turning red — and offers 取消.
+- **A revealed key puts itself back behind the mask** after eight seconds; the
+  clipboard already has it.
+- Model refresh failures surface as a toast instead of an unhandled rejection.
+- Which sections you left open is remembered per browser, and toasts announce
+  themselves to screen readers.
+
 ## 0.4.1
 
 - The panel shows the site as **Psapi** instead of Sub2API, matching the

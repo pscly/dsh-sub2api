@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.4.3
+
+Interface polish, driven by an audit against the host's real design tokens.
+
+- **Dark mode actually uses the warning colour.** The panel asked for
+  `--dsw-alias-state-warning-primary`; DSH defines `state-warn-primary`. The name
+  never matched, so the amber fell back to a light-mode value on dark surfaces.
+- Keyboard focus is visible again: inline styles cannot express `:focus-visible`,
+  so one scoped stylesheet carries the ring, and buttons, rows and inputs gained
+  hover and pressed states that work on both themes.
+- `prefers-reduced-motion` is respected.
+- Model search matches the display name as well as the id, appears from five
+  models instead of nine, and reports how many matched.
+- Progress bars are 6px tall with a real `progressbar` role and value.
+
 ## 0.4.2
 
 Recharge and key handling, which are the two places where a mistake costs

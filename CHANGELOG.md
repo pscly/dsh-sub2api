@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.1
+
+- Package metadata for the plugin market: `repository`, `homepage`, `bugs`,
+  `author`, and a 180×180 icon in `assets/`.
+
 ## 0.5.0
 
 - **`deepseek-flash` ships with the plugin.** A zero-balance account gets

@@ -7,7 +7,14 @@
 ```
 npm:  dsh-sub2api          https://www.npmjs.com/package/dsh-sub2api
 repo: pscly/dsh-sub2api    https://github.com/pscly/dsh-sub2api
+安装: dsh plugin add dsh-sub2api      需要 DSH ≥ 0.2.2-rc.1，装完重启 DSH
 ```
+
+![设置页面板](https://raw.githubusercontent.com/pscly/dsh-sub2api/main/assets/screenshots/panel.png)
+
+装好之后你不需要碰任何接口地址或密钥：**邮箱 + 密码**就够了。插件自己判断该登录还是注册，
+在账号下建一个名为 `dsh` 的密钥存档，把模型同步进选择器，并把余额、用量、订阅、兑换码、
+充值集中在一个面板里。
 
 ---
 
@@ -83,6 +90,8 @@ dsh plugin add dsh-sub2api
 ## 聊天输入框右下角的余额徽章
 
 插件在对话输入框的右下角（`conversation.input.right`）常驻一个小徽章：
+
+![余额徽章](https://raw.githubusercontent.com/pscly/dsh-sub2api/main/assets/screenshots/badge.png)
 
 ```
 ● ¥12.34            正常

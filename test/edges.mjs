@@ -49,31 +49,47 @@ try {
   apply(host.ctx, { apiBase: "http://127.0.0.1:1", payBase: "http://127.0.0.1:1" });
   const { adapter } = host.registered.adapters[0];
   const models = await adapter.listModels("sub2api");
-  assert.deepEqual(models, [], "没有凭据服务时目录为空而不是抛错");
+  // No credential service still means no throw; the built-in remains so the
+  // picker is not empty while the plugin reports the real problem elsewhere.
+  assert.deepEqual(models.map((m) => m.id), ["deepseek-flash"], "没有凭据服务时只保留内置模型");
   pass("读取会话安全降级");
 } catch (error) {
   fail("缺少凭据服务", error);
 }
 
-console.log("\n[C] 适配器在目录为空时的报错信息");
+console.log("\n[C] 上游一个模型都没有时，内置 deepseek-flash 仍然可用");
 try {
   const host = createFakeHost();
   host.services.set("credentials", createFakeCredentials());
   apply(host.ctx, { apiBase: "http://127.0.0.1:1", payBase: "http://127.0.0.1:1", modelsCachePath: `${process.env.TMPDIR ?? "/tmp"}/dsh-sub2api-empty-${process.pid}.json` });
   const { adapter } = host.registered.adapters[0];
   assert.ok(adapter instanceof Sub2ApiAdapter);
+
+  // The picker must not be empty just because the upstream refused to list
+  // (a zero-balance account gets 403 INSUFFICIENT_BALANCE from /v1/models).
+  const models = await adapter.listModels();
+  assert.equal(models.length, 1, `应恰好剩下内置模型，实际 ${JSON.stringify(models.map((m) => m.id))}`);
+  assert.equal(models[0].id, "deepseek-flash");
+  const resolved = await adapter.resolveModel("sub2api", "deepseek-flash");
+  assert.ok(
+    (resolved?.context?.contextWindow ?? 0) >= 1048576,
+    `内置模型的容量要够开新会话，实际 ${JSON.stringify(resolved?.context)}`,
+  );
+
+  // The request itself now goes out instead of being rejected locally; this
+  // endpoint answers nothing, so the failure is a transport one.
   await assert.rejects(
     async () => {
-      for await (const _chunk of adapter.stream({ provider: "sub2api", model: "x", messages: [] })) {
+      for await (const _chunk of adapter.stream({ provider: "sub2api", model: "deepseek-flash", messages: [] })) {
         // no chunks expected
       }
     },
     (error) => {
-      assert.match(String(error.message), /模型/);
+      assert.doesNotMatch(String(error.message), /没有可用模型|尚未同步/);
       return true;
     },
   );
-  pass("空目录时给出可操作提示");
+  pass("空目录仍提供 deepseek-flash");
 } catch (error) {
   fail("空目录提示", error);
 }
@@ -241,10 +257,14 @@ try {
 
   const visible = catalog.visible();
   assert.ok(visible.every((m) => typeof m.contextWindow === "number" && m.contextWindow > 0), "每个模型都要有容量");
-  assert.deepEqual(visible.map((m) => m.contextSource), ["known", "default", "upstream"]);
+  // Upstream order first, then the built-in every install ships with.
+  assert.deepEqual(visible.map((m) => m.contextSource), ["known", "default", "upstream", "known"]);
   assert.equal(visible[0].contextWindow, 1048576);
   assert.equal(visible[1].contextWindow, DEFAULT_CONTEXT_WINDOW);
   assert.equal(visible[2].contextWindow, 32000);
+  assert.equal(visible[3].id, "deepseek-flash", "内置模型必须始终在列表里");
+  assert.equal(visible[3].builtin, true);
+  assert.equal(visible[3].contextWindow, 1048576);
 
   const llm = catalog.llmModels();
   assert.ok(llm.every((m) => typeof m.contextWindow === "number"), "交给传输层的配置也要带容量");
@@ -258,6 +278,8 @@ try {
   forced.models = [{ id: "declared", name: "declared", contextWindow: 32000 }];
   assert.equal(forced.visible()[0].contextWindow, 64000);
   assert.equal(forced.visible()[0].contextSource, "config");
+  assert.equal(forced.visible().length, 2, "白名单只选一个模型时，内置模型仍然保留");
+  assert.equal(forced.visible()[1].contextWindow, 64000, "强制容量同样作用于内置模型");
 
   // The host asks the adapter for these facts; an empty answer is what the
   // compaction error complained about.
@@ -360,6 +382,48 @@ try {
   pass("等待 webServer 后再挂路由", `${host.registered.routes.length} 条`);
 } catch (error) {
   fail("延迟注册 webServer", error);
+}
+
+console.log("\n[N] 安装后把默认模型换成 sub2api/deepseek-flash（只做一次）");
+try {
+  const { mkdtemp } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const dir = await mkdtemp(join(tmpdir(), "sub2api-default-"));
+  const panelPath = join(dir, "panel.json");
+
+  const makeHost = (current) => {
+    const saved = [];
+    const host = createFakeHost();
+    host.services.set("credentials", createFakeCredentials());
+    host.services.set("agentDefaultModel", {
+      currentSelection: () => current,
+      saveSelection: async (next) => { saved.push(next); },
+    });
+    apply(host.ctx, {
+      apiBase: "http://127.0.0.1:1",
+      payBase: "http://127.0.0.1:1",
+      panelPath,
+      modelsCachePath: join(dir, "models.json"),
+    });
+    return { host, saved };
+  };
+
+  const first = makeHost({ provider: "deepseek", model: "deepseek-chat" });
+  await new Promise((resolve) => setTimeout(resolve, 120));
+  assert.deepEqual(first.saved, [{ provider: "sub2api", model: "deepseek-flash" }], "首次安装应切换默认模型");
+
+  // The flag is on disk, so a restart must not fight a deliberate choice.
+  const second = makeHost({ provider: "anthropic", model: "claude" });
+  await new Promise((resolve) => setTimeout(resolve, 120));
+  assert.deepEqual(second.saved, [], "同一次安装内不应反复改写用户的选择");
+
+  const third = makeHost({ provider: "sub2api", model: "deepseek-flash" });
+  await new Promise((resolve) => setTimeout(resolve, 120));
+  assert.deepEqual(third.saved, [], "已经是 sub2api 时无需写入");
+  pass("默认模型只切换一次", "首次写入，之后不再打扰");
+} catch (error) {
+  fail("默认模型切换", error);
 }
 
 const failed = results.filter((entry) => !entry.ok);

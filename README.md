@@ -65,6 +65,21 @@ dsh plugin add dsh-sub2api
 
 ---
 
+## 内置模型与默认模型
+
+安装后有两件事自动发生：
+
+**1. DSH 的默认模型被改成 `sub2api/deepseek-flash`**
+
+写进 profile 配置（`agent-default-model`），重启后依然生效。**只做一次** ——
+你之后手动换成别的 provider，插件不会再抢回来。
+
+**2. 永远自带一个 `deepseek-flash`**
+
+零余额账号请求 `/v1/models` 会拿到 `403 INSUFFICIENT_BALANCE`，以前结果是模型选择器**完全空白**，装完像坏了一样。现在无论有没有余额、有没有同步成功，列表里至少有一个 `deepseek-flash`（上下文 1,048,576，实测值）；上游真的返回后，真实目录会覆盖它。
+
+面板里它带一个「内置」标签，避免被误认为是上游列出来的。
+
 ## 聊天输入框右下角的余额徽章
 
 插件在对话输入框的右下角（`conversation.input.right`）常驻一个小徽章：

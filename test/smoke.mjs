@@ -105,7 +105,14 @@ try {
   assert.ok(credentials._refs.get("SUB2API_API_KEY"), "凭据库应当存有密钥");
   stateAfterAuth = data.state;
   pass("注册后自动建 dsh 密钥并写入凭据", `${sub2api.keys.length} 个密钥`);
-  assert.equal(stateAfterAuth.models.models.length, 0, "零余额时模型为空");
+  // A zero-balance account gets 403 from /v1/models; the built-in keeps the
+  // picker usable instead of empty.
+  assert.deepEqual(
+    stateAfterAuth.models.models.map((m) => m.id),
+    ["deepseek-flash"],
+    "零余额时只保留内置模型",
+  );
+  assert.equal(stateAfterAuth.models.needsRecharge, true, "要说明是余额问题");
   assert.equal(stateAfterAuth.models.needsRecharge, true, "应当标记为需要充值");
   pass("零余额被识别为需要充值，而不是静默为空");
 } catch (error) {
@@ -163,11 +170,11 @@ try {
   // enough for the catalog to fill itself, because a top-up usually happens on
   // the payment site and nothing else would tell the plugin about it.
   const state = await json(harness.base, "/api/sub2api/status");
-  assert.equal(state.models.models.length, 3, `自动同步后 ${state.models.models.length} 个`);
+  assert.equal(state.models.models.length, 4, `自动同步后 ${state.models.models.length} 个（含内置）`);
   assert.equal(state.models.needsRecharge, false, "不应再标记为待充值");
 
   const after = await json(harness.base, "/api/sub2api/models");
-  assert.equal(after.models.length, 3, "目录已经填充");
+  assert.equal(after.models.length, 4, "目录已经填充（含内置）");
   pass("余额到账后自动同步，无需手动刷新", `${after.models.length} 个`);
 } catch (error) {
   fail("充值后模型解禁", error);
@@ -180,19 +187,27 @@ try {
   assert.ok(host.registered.replaced.length > 0, "同步后应当调用 replace() 通知选择器");
 
   const before = await json(harness.base, "/api/sub2api/models", undefined);
-  assert.equal(before.all.length, 3, `全量 ${before.all.length}`);
+  assert.equal(before.all.length, 4, `全量 ${before.all.length}（含内置）`);
   assert.deepEqual(before.allowed, [], "默认不限制");
 
   const only = await json(harness.base, "/api/sub2api/models/visible", { ids: ["glm-5.2"] });
   assert.deepEqual(only.models.allowed, ["glm-5.2"]);
-  assert.equal(only.models.models.length, 1, "只显示勾选的模型");
+  assert.deepEqual(
+    only.models.models.map((m) => m.id).sort(),
+    ["deepseek-flash", "glm-5.2"],
+    "勾选的白名单加上始终保留的内置模型",
+  );
 
   const { adapter } = host.registered.adapters[0];
   const listed = await adapter.listModels("sub2api");
-  assert.equal(listed.length, 1, "选择器接口也只剩下勾选的那个");
+  assert.deepEqual(
+    listed.map((m) => m.id).sort(),
+    ["deepseek-flash", "glm-5.2"],
+    "选择器接口同样只剩勾选的模型加内置模型",
+  );
 
   const all = await json(harness.base, "/api/sub2api/models/visible", { ids: [] });
-  assert.equal(all.models.models.length, 3, "清空选择后恢复全部");
+  assert.equal(all.models.models.length, 4, "清空选择后恢复全部（含内置）");
 
   await assert.rejects(
     () => json(harness.base, "/api/sub2api/models/visible", { ids: ["nope"] }),
@@ -244,8 +259,10 @@ console.log("\n[7] 适配器：模型列表与流式对话");
 try {
   const { adapter } = host.registered.adapters[0];
   const models = await adapter.listModels("sub2api");
-  assert.equal(models.length, 3, `模型数量 ${models.length}`);
+  // The three upstream models plus the built-in every install carries.
+  assert.equal(models.length, 4, `模型数量 ${models.length}`);
   assert.ok(models.every((model) => model.provider === "sub2api"));
+  assert.equal(models[models.length - 1].id, "deepseek-flash", "内置模型应排在最后");
 
   const chunks = [];
   for await (const chunk of adapter.stream({

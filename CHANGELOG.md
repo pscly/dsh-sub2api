@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.5.0
+
+- **`deepseek-flash` ships with the plugin.** A zero-balance account gets
+  `403 INSUFFICIENT_BALANCE` from `/v1/models`, which used to leave the model
+  picker completely empty — an install that looks broken. One entry is always
+  offered now, with the measured 1,048,576-token window, and a real catalogue
+  replaces it as soon as one arrives.
+- **Installing switches DSH's default model to `sub2api/deepseek-flash`.** Done
+  through the host's `agentDefaultModel` service, so it is written into the
+  profile and survives restarts. Once only: pick another provider afterwards and
+  the plugin leaves that alone.
+- Fixed a regression this introduced while it was being built: the auto-sync
+  after a top-up keyed off "the catalogue is empty", which can no longer be true,
+  so it never ran once the built-in existed. It now asks the catalogue whether
+  the *upstream* is empty.
+- The panel tags the built-in model so its presence is not mistaken for an
+  upstream listing.
+
 ## 0.4.3
 
 Interface polish, driven by an audit against the host's real design tokens.

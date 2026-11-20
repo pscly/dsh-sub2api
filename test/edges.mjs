@@ -237,6 +237,13 @@ try {
   assert.equal(knownContext("deepseek/deepseek-v4.1-flash"), 1048576);
   assert.equal(knownContext("glm-5.2"), undefined);
 
+  // The gateway's /v1/models carries no context at all, so these come from the
+  // measured table; without it every one of them advertised 128k.
+  assert.equal(knownContext("deepseek-v4.1-flash"), 1048576, "deepseek 实测值");
+  assert.equal(knownContext("gpt-6-sol"), 950272, "gpt-6 实测值");
+  assert.equal(knownContext("gpt-6.2-astra"), 524288, "同族不同代要各测各的");
+  assert.equal(knownContext("muse-video"), 262144);
+
   const catalog = new ModelCatalog({
     api: { gatewayModels: async () => ({ data: [] }) },
     cachePath: () => "/tmp/ctx-check.json",

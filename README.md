@@ -278,6 +278,38 @@ Cannot switch to sub2api/...: no context capacity; configure contextWindow on th
 
 ---
 
+## 上下文窗口从哪来
+
+网关的 `/v1/models` **只返回模型 id，一个容量字段都没有**（46 个模型全是这样）。所以插件必须自己知道这些数字，
+否则每个模型都只能按默认值显示——这也是「有些模型居然只有 128k」的原因。
+
+容量按这个顺序解析：
+
+| 优先级 | 来源 | 面板标注 |
+|---|---|---|
+| 1 | 配置里强制指定 | — |
+| 2 | 面板里手动填 | 手填 |
+| 3 | 上游在 `/v1/models` 里声明 | — |
+| 4 | **实测表** `lib/model-context.js` | 实测 |
+| 5 | 默认值（默认 128000） | 默认 |
+
+实测表是**测出来的，不是抄的**：发一个超过模型容量的 prompt，服务端会在生成前拒绝并报出上限；
+不报数字的模型（比如 gpt 系列只说 "Your input exceeds the context window"）就用二分法在「能过」和「过不了」之间逼近。
+脚本在 `scripts/build-context-table.mjs`，被拒的请求不计费。
+
+已知实测值（2026-11-20）：
+
+| 模型 | 上下文 |
+|---|---|
+| `deepseek-flash` / `deepseek-pro` / `deepseek-v4-pro` / `deepseek-v4.1-flash`（含 `deepseek/` 前缀别名） | 1,048,576 |
+| `gpt-5.6-*` / `gpt-6-*` / `gpt-6.1-*` / `gpt-reserve` / `codex-auto-review` | 950,272 |
+| `gpt-6.2-astra` | 524,288 |
+| `qwen3.8-max` | 1,015,808 |
+| `muse-image` | 2,097,152 |
+| `muse-video` | 262,144 |
+
+面板里标「默认」的模型就是**没测到**的（上游当时不可用），会有一行提示列出来，点右侧数字可以手填。
+
 ## 自动重试
 
 回答还没吐出第一个字之前，插件会自动重试这几类失败：

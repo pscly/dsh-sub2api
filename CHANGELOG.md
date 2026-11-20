@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.6.0
+
+- **Context windows are now measured, not guessed.** The gateway's `/v1/models`
+  returns ids only — no capacity field at all — so every model used to fall back
+  to the 128k default, which is what made a 950k-context model advertise 128k.
+  A probe against the live gateway measured 20 models (an oversized prompt is
+  rejected before generation with the limit; models that do not state a number
+  are bisected). `scripts/build-context-table.mjs` regenerates the table.
+- Max output tokens are wired through the same table when the gateway reports
+  them, so the host stops sending an output cap the upstream rejects.
+- The panel says how many models are still on the default and names them, so
+  "128k" can be told apart from "not measured yet"; each can be filled by hand.
+
 ## 0.5.1
 
 - Package metadata for the plugin market: `repository`, `homepage`, `bugs`,

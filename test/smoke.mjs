@@ -249,6 +249,33 @@ try {
   fail("单模型上下文", error);
 }
 
+console.log("\n[6.75] 自动测量容量");
+try {
+  chatHooks.contextLimit = 200_000;
+  const before = await json(harness.base, "/api/sub2api/models");
+  const target = before.models.find((m) => m.id === "glm-5.2");
+
+  const result = await json(harness.base, "/api/sub2api/models/measure", { ids: ["glm-5.2"] });
+  assert.equal(result.measured.length, 1, "应当测到一个模型");
+  const measured = result.measured[0];
+  assert.ok(
+    measured.contextWindow >= 150_000 && measured.contextWindow <= 210_000,
+    `容量应在 20 万附近，实际 ${measured.contextWindow}`,
+  );
+
+  const after = await json(harness.base, "/api/sub2api/models");
+  const saved = after.models.find((m) => m.id === "glm-5.2");
+  assert.equal(saved.contextSource, "panel", "测量结果要作为手填值保存下来");
+  assert.equal(saved.contextWindow, measured.contextWindow);
+  assert.ok(target, "测前模型存在");
+
+  chatHooks.contextLimit = undefined;
+  pass("测得的容量写回面板", `${Math.round(measured.contextWindow / 1000)}k`);
+} catch (error) {
+  chatHooks.contextLimit = undefined;
+  fail("自动测量容量", error);
+}
+
 console.log("\n[6.8] 诊断");
 try {
   const report = await json(harness.base, "/api/sub2api/diagnose");

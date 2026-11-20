@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.7.0
+
+- **Measure context windows from the panel.** Models still on the default are
+  listed with a 自动测量容量 button: the plugin probes the gateway with the
+  user's own key, saves what it finds as a per-model override, and applies it
+  immediately. Rejected probes are not billed, unreachable models are reported
+  by id instead of failing the batch, and the whole thing is capped at eight
+  models per click.
+- The same measurement is available headlessly through
+  `scripts/measure-context.mjs` for filling the shipped table.
+- Fixed a render crash the unit tests could not see: the new handler called a
+  helper that had been replaced during an earlier refactor, so the panel showed
+  its error boundary instead of the settings page. Caught by rendering the panel
+  in a real browser, which is now part of the release check.
+
 ## 0.6.2
 
 - The measurement itself is in the repository now (`scripts/measure-context.mjs`),

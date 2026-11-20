@@ -195,6 +195,24 @@ export function startFakeSub2Api(hooks = {}) {
       if (!key) return sendJson(res, 401, { error: { message: "API_KEY_REQUIRED" } });
       hooks.onChatBody?.(body);
 
+      // A model that refuses oversized prompts, the way every upstream does:
+      // that rejection is how the plugin measures a context window.
+      if (typeof hooks.contextLimit === "number") {
+        let chars = 0;
+        for (const message of Array.isArray(body?.messages) ? body.messages : []) {
+          chars += typeof message?.content === "string" ? message.content.length : 0;
+        }
+        const tokens = Math.ceil(chars / 2);
+        if (tokens > hooks.contextLimit) {
+          return sendJson(res, 400, {
+            error: {
+              message: `This model's maximum context length is ${hooks.contextLimit} tokens; the prompt has ${tokens} tokens`,
+              type: "invalid_request_error",
+            },
+          });
+        }
+      }
+
       // Simulate a dropped connection: the socket dies before any response,
       // which is exactly what the transport reports as TRANSPORT.
       if (hooks.dropChatTimes > 0) {

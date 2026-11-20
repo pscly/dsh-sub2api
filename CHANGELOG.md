@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.2
+
+- The measurement itself is in the repository now (`scripts/measure-context.mjs`),
+  so the table can be refreshed with one command whenever upstream accounts
+  come back — seven models were unreachable during this run and still fall back
+  to the default.
+
 ## 0.6.1
 
 - Adds `gpt-6.2-sol` (950,272) and `qwen3.8-max` (1,015,808) to the measured

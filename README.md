@@ -310,6 +310,17 @@ Cannot switch to sub2api/...: no context capacity; configure contextWindow on th
 
 面板里标「默认」的模型就是**没测到**的（上游当时不可用），会有一行提示列出来，点右侧数字可以手填。
 
+账号恢复后想补齐，仓库里带了两条命令：
+
+```sh
+# 1) 重新测一遍（--only 可选，只测指定模型）
+node scripts/measure-context.mjs --key sk-... --out /tmp/ctx.json
+
+# 2) 生成插件用的表
+node scripts/build-context-table.mjs /tmp/ctx.json
+npm test && npm publish
+```
+
 ## 自动重试
 
 回答还没吐出第一个字之前，插件会自动重试这几类失败：

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.1
+
+- Adds `gpt-6.2-sol` (950,272) and `qwen3.8-max` (1,015,808) to the measured
+  table. Same generation, different window: `gpt-6.2-astra` is 524,288, which is
+  exactly why the table measures every id instead of extrapolating a family.
+
 ## 0.6.0
 
 - **Context windows are now measured, not guessed.** The gateway's `/v1/models`

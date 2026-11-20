@@ -176,6 +176,9 @@ export function startFakeSub2Api(hooks = {}) {
         data: [
           { id: "glm-5.2", object: "model", owned_by: "zhipu", context_length: 200000 },
           { id: "kimi-k3", object: "model", owned_by: "moonshot", context_length: 256000 },
+          // The live gateway declares nothing; this one exercises the measured
+          // table the same way, since upstream wins when it does declare.
+          { id: "deepseek-v4.1-flash", object: "model", owned_by: "deepseek" },
           { id: "gpt-5.6-vision", object: "model", owned_by: "openai", capabilities: { vision: true } },
         ],
       });

@@ -170,11 +170,11 @@ try {
   // enough for the catalog to fill itself, because a top-up usually happens on
   // the payment site and nothing else would tell the plugin about it.
   const state = await json(harness.base, "/api/sub2api/status");
-  assert.equal(state.models.models.length, 4, `自动同步后 ${state.models.models.length} 个（含内置）`);
+  assert.equal(state.models.models.length, 5, `自动同步后 ${state.models.models.length} 个（含内置）`);
   assert.equal(state.models.needsRecharge, false, "不应再标记为待充值");
 
   const after = await json(harness.base, "/api/sub2api/models");
-  assert.equal(after.models.length, 4, "目录已经填充（含内置）");
+  assert.equal(after.models.length, 5, "目录已经填充（含内置）");
   pass("余额到账后自动同步，无需手动刷新", `${after.models.length} 个`);
 } catch (error) {
   fail("充值后模型解禁", error);
@@ -187,7 +187,13 @@ try {
   assert.ok(host.registered.replaced.length > 0, "同步后应当调用 replace() 通知选择器");
 
   const before = await json(harness.base, "/api/sub2api/models", undefined);
-  assert.equal(before.all.length, 4, `全量 ${before.all.length}（含内置）`);
+  assert.equal(before.all.length, 5, `全量 ${before.all.length}（含内置）`);
+
+  const measured = await json(harness.base, "/api/sub2api/models");
+  const withoutUpstreamContext = measured.models.find((m) => m.id === "deepseek-v4.1-flash");
+  assert.ok(withoutUpstreamContext, "上游没声明容量的模型也要出现在列表里");
+  assert.equal(withoutUpstreamContext.contextWindow, 1048576, "应使用实测容量而不是默认 128k");
+  assert.equal(withoutUpstreamContext.contextSource, "known", "来源要标成实测");
   assert.deepEqual(before.allowed, [], "默认不限制");
 
   const only = await json(harness.base, "/api/sub2api/models/visible", { ids: ["glm-5.2"] });
@@ -207,7 +213,7 @@ try {
   );
 
   const all = await json(harness.base, "/api/sub2api/models/visible", { ids: [] });
-  assert.equal(all.models.models.length, 4, "清空选择后恢复全部（含内置）");
+  assert.equal(all.models.models.length, 5, "清空选择后恢复全部（含内置）");
 
   await assert.rejects(
     () => json(harness.base, "/api/sub2api/models/visible", { ids: ["nope"] }),
@@ -260,7 +266,7 @@ try {
   const { adapter } = host.registered.adapters[0];
   const models = await adapter.listModels("sub2api");
   // The three upstream models plus the built-in every install carries.
-  assert.equal(models.length, 4, `模型数量 ${models.length}`);
+  assert.equal(models.length, 5, `模型数量 ${models.length}`);
   assert.ok(models.every((model) => model.provider === "sub2api"));
   assert.equal(models[models.length - 1].id, "deepseek-flash", "内置模型应排在最后");
 

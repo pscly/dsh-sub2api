@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.1
+
+- `muse-spark` measured at 2,097,152 (it accepts more than the ladder was
+  willing to send, so the value is a lower bound, which is the safe direction).
+- Restores `gpt-6.2-sol` and `qwen3.8-max` to the generated table; a rerun had
+  rebuilt it from a partial file and dropped them.
+
+With this, **every model the picker offers has a measured context window** — the
+seven that cannot be measured are exactly the seven the gateway cannot route,
+and those no longer appear in the picker at all.
+
 ## 0.8.0
 
 - **Models that cannot be routed leave the picker.** A sub2api catalogue lists

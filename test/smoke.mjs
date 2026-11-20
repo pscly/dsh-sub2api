@@ -41,7 +41,7 @@ async function json(base, path, body) {
   return payload.data;
 }
 
-const chatHooks = { onChatBody: (body) => { lastChatBody = body; }, dropChatTimes: 0, gateway502Times: 0, upstream502Times: 0, proxyTimeoutTimes: 0 };
+const chatHooks = { onChatBody: (body) => { lastChatBody = body; }, dropChatTimes: 0, gateway502Times: 0, upstream502Times: 0, proxyTimeoutTimes: 0, brokenModels: new Set() };
 let lastChatBody;
 const sub2api = startFakeSub2Api(chatHooks);
 const sub2apiBase = await sub2api.listen();
@@ -247,6 +247,44 @@ try {
   pass("手填容量可覆盖、可清除");
 } catch (error) {
   fail("单模型上下文", error);
+}
+
+console.log("\n[6.72] 不可用的模型不进选择器");
+try {
+  chatHooks.brokenModels = new Set(["glm-5.2"]);
+  const refreshed = await json(harness.base, "/api/sub2api/models/refresh", {});
+  assert.ok(refreshed.unavailable >= 1, `应至少发现一个不可用模型，实际 ${refreshed.unavailable}`);
+
+  const snap = refreshed.models;
+  assert.ok(
+    !snap.models.some((m) => m.id === "glm-5.2"),
+    "路由不通的模型不应出现在选择器里",
+  );
+  assert.ok(
+    snap.all.some((m) => m.id === "glm-5.2"),
+    "但目录里要留着，面板才能解释为什么少了它",
+  );
+  assert.deepEqual(
+    snap.unavailable.map((m) => m.id),
+    ["glm-5.2"],
+    "不可用列表要写明是哪个",
+  );
+
+  const { adapter } = host.registered.adapters[0];
+  const listed = await adapter.listModels("sub2api");
+  assert.ok(!listed.some((m) => m.id === "glm-5.2"), "选择器接口同样要排除");
+
+  chatHooks.brokenModels = new Set();
+  const healed = await json(harness.base, "/api/sub2api/models/health", {});
+  assert.equal(healed.unavailable, 0, "恢复后应清零");
+  assert.ok(
+    healed.models.models.some((m) => m.id === "glm-5.2"),
+    "恢复后重新出现在选择器里",
+  );
+  pass("不可用模型自动隐藏，恢复后自动回来");
+} catch (error) {
+  chatHooks.brokenModels = new Set();
+  fail("可用性检查", error);
 }
 
 console.log("\n[6.75] 自动测量容量");

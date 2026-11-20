@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.8.0
+
+- **Models that cannot be routed leave the picker.** A sub2api catalogue lists
+  models the account pool no longer serves — choosing one fails only when you
+  press send. Refreshing now asks every model for a single token, and the ones
+  that answer 404/502 are hidden from the conversation picker while staying in
+  the panel with a reason, so the list can be explained rather than just shorter.
+  A sweep costs a handful of tokens and can be re-run from the panel.
+- Timeouts are reported as "undecided", never as unavailable: image and video
+  models do not answer a chat completion at all, and hiding something usable is
+  worse than leaving it.
+
 ## 0.7.0
 
 - **Measure context windows from the panel.** Models still on the default are

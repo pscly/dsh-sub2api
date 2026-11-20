@@ -195,6 +195,14 @@ export function startFakeSub2Api(hooks = {}) {
       if (!key) return sendJson(res, 401, { error: { message: "API_KEY_REQUIRED" } });
       hooks.onChatBody?.(body);
 
+      // A model no account can route: the gateway answers 502 without ever
+      // reaching an upstream, which is what the availability sweep looks for.
+      if (hooks.brokenModels instanceof Set && hooks.brokenModels.has(String(body?.model))) {
+        return sendJson(res, 502, {
+          error: { message: "Upstream service temporarily unavailable", type: "upstream_error" },
+        });
+      }
+
       // A model that refuses oversized prompts, the way every upstream does:
       // that rejection is how the plugin measures a context window.
       if (typeof hooks.contextLimit === "number") {

@@ -1,6 +1,6 @@
 {
   "name": "dsh-sub2api",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Psapi (sub.pscly.cc) provider for DeepSeek Harness: zero-friction signup, auto-provisioned API key, upstream model sync, balance and recharge",
   "type": "module",
   "license": "GPL-3.0-only",
